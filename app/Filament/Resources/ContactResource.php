@@ -5,7 +5,6 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\ContactResource\Pages;
 use App\Filament\Resources\ContactResource\RelationManagers;
 use App\Models\Contact;
-use Illuminate\Support\HtmlString;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -13,7 +12,6 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Filament\Tables\Filters\Filter;
 
 class ContactResource extends Resource
 {
@@ -76,7 +74,7 @@ class ContactResource extends Resource
                     ->sortable(),
             ])
             ->filters([
-                Filter::make('name')
+                Tables\Filters\Filter::make('name')
                     ->form([
                         Forms\Components\TextInput::make('value')->label('Nome'),
                     ])
@@ -87,7 +85,7 @@ class ContactResource extends Resource
                         );
                     }),
 
-                Filter::make('role')
+                Tables\Filters\Filter::make('role')
                     ->form([
                         Forms\Components\TextInput::make('value')->label('Ruolo'),
                     ])

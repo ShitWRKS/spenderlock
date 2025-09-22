@@ -2,6 +2,9 @@
 
 namespace App\Filament\Widgets;
 
+use Filament\Forms\Components\Select;
+use Filament\Tables\Columns\TextColumn;
+use App\Support\BudgetHelper;
 use App\Models\Contract;
 use Filament\Forms;
 use Filament\Tables;
@@ -20,7 +23,7 @@ class UpcomingContracts extends BaseWidget
         $years = range($currentYear, $currentYear + 5);
 
         return [
-            Forms\Components\Select::make('year')
+            Select::make('year')
                 ->label('Anno')
                 ->options(array_combine($years, $years))
                 ->default($currentYear)
@@ -39,25 +42,25 @@ class UpcomingContracts extends BaseWidget
                     ->orderBy('end_date');
             })
             ->columns([
-                Tables\Columns\TextColumn::make('title')
+                TextColumn::make('title')
                     ->label('Titolo')
                     ->searchable()
                     ->sortable()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('supplier.name')
+                TextColumn::make('supplier.name')
                     ->label('Fornitore')
                     ->searchable()
                     ->sortable()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('end_date')
+                TextColumn::make('end_date')
                     ->label('Scade il')
                     ->date()
                     ->sortable()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('giorni')
+                TextColumn::make('giorni')
                     ->label('Giorni rimanenti')
                     ->badge()
                     ->sortable()
@@ -77,7 +80,7 @@ class UpcomingContracts extends BaseWidget
                         return 'success';
                     }),
 
-                Tables\Columns\TextColumn::make('importo_annuale')
+                TextColumn::make('importo_annuale')
                     ->label('Importo Anno')
                     ->money('EUR')
                     ->sortable()
@@ -85,7 +88,7 @@ class UpcomingContracts extends BaseWidget
                     ->badge()
                     ->color('primary')
                     ->state(function ($record) {
-                        return \App\Support\BudgetHelper::getTotaleAllocatoPerAnno(now()->year);
+                        return BudgetHelper::getTotaleAllocatoPerAnno(now()->year);
                     })
             ])
             ->recordUrl(fn($record) => route('filament.admin.resources.contracts.view', ['record' => $record]));

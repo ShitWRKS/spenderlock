@@ -15,8 +15,6 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class BudgetResource extends Resource
 {
-
-
     protected static ?string $model = Budget::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-currency-euro';
@@ -24,6 +22,7 @@ class BudgetResource extends Resource
     protected static ?string $pluralModelLabel = 'Budget';
     protected static ?string $modelLabel = 'Budget';
     protected static ?string $navigationGroup = 'Area Amministrativa';
+    
     public static function form(Form $form): Form
     {
         return $form
@@ -135,5 +134,4 @@ class BudgetResource extends Resource
             \App\Filament\Resources\BudgetResource\Widgets\ContractsPerAnnoWidget::class,
         ];
     }
-
 }
