@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\ContractResource\Pages;
 use App\Filament\Resources\ContractResource\RelationManagers;
 use App\Models\Contract;
+use App\Models\ContractCategory;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -12,6 +13,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Carbon\Carbon;
 
 class ContractResource extends Resource
 {
@@ -22,6 +24,7 @@ class ContractResource extends Resource
     protected static ?string $pluralModelLabel = 'Contratti';
     protected static ?string $modelLabel = 'Contratto';
     protected static ?string $navigationGroup = 'Area Amministrativa';
+    
     public static function form(Form $form): Form
     {
         return $form
@@ -39,7 +42,7 @@ class ContractResource extends Resource
                             ->required(),
                         Forms\Components\Select::make('contract_category_id')
                             ->label('Categoria')
-                            ->options(\App\Models\ContractCategory::all()->pluck('name', 'id'))
+                            ->options(ContractCategory::all()->pluck('name', 'id'))
                             ->searchable()
                             ->preload()
                             ->required(),
@@ -194,8 +197,8 @@ class ContractResource extends Resource
                 Tables\Columns\TextColumn::make('importi_annuali')
                     ->label('Spesa per anno')
                     ->formatStateUsing(function ($state, Contract $record) {
-                        $start = \Carbon\Carbon::parse($record->start_date);
-                        $end = \Carbon\Carbon::parse($record->end_date);
+                        $start = Carbon::parse($record->start_date);
+                        $end = Carbon::parse($record->end_date);
                         $years = range($start->year, $end->year);
                         $totalMonths = $start->diffInMonths($end) + 1;
                         $monthlyRate = $totalMonths > 0 ? $record->amount_total / $totalMonths : 0;
@@ -203,8 +206,8 @@ class ContractResource extends Resource
                         $badges = [];
 
                         foreach ($years as $year) {
-                            $yearStart = \Carbon\Carbon::create($year, 1, 1);
-                            $yearEnd = \Carbon\Carbon::create($year, 12, 31);
+                            $yearStart = Carbon::create($year, 1, 1);
+                            $yearEnd = Carbon::create($year, 12, 31);
                             $effectiveStart = $start->gt($yearStart) ? $start : $yearStart;
                             $effectiveEnd = $end->lt($yearEnd) ? $end : $yearEnd;
 
