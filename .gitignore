@@ -1,0 +1,69 @@
+/.phpunit.cache
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/vendor
+.env
+.env.backup
+.env.production
+.env.local
+.env.*.local
+.phpactor.json
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+/auth.json
+/.fleet
+/.idea
+/.nova
+/.vscode
+/.zed
+CLAUDE.md
+
+# Laravel specific
+/storage/logs/*.log
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/bootstrap/cache/*.php
+*.sqlite
+*.sqlite-journal
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Development files
+*.swp
+*.swo
+*~
+
+# IDE specific
+/.phpstorm.meta.php
+/_ide_helper.php
+/_ide_helper_models.php
+/.phpunit.cache
+
+# Deployment
+/deploy.php
+/Envoy.blade.php
+
+# Laravel Mix
+/public/js
+/public/css
+/public/mix-manifest.json
+
+# Coverage reports
+/coverage
+/.nyc_output
+/clover.xml
