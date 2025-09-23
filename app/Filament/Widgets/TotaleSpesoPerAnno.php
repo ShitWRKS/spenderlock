@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Support\BudgetHelper;
 use App\Models\Contract;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
@@ -31,6 +32,6 @@ class TotaleSpesoPerAnno extends BaseWidget
 
     private function getTotalForYear(int $year): float
     {
-        return \App\Support\BudgetHelper::getTotaleAllocatoPerAnno($year);
+        return BudgetHelper::getTotaleAllocatoPerAnno($year);
     }
 }
