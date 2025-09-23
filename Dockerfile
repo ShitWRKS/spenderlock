@@ -2,7 +2,7 @@ FROM serversideup/php:8.4-fpm-nginx-alpine AS prod
 
 USER root
 
-RUN install-php-extensions bcmath pdo_mysql pcntl
+RUN install-php-extensions bcmath pdo_mysql pcntl intl
 
 ENV AUTORUN_ENABLED="true" \
     AUTORUN_LARAVEL_MIGRATION_ISOLATION="false" \
