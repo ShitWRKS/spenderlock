@@ -14,6 +14,6 @@ class Budget extends Model
 
     public function contractCategory()
     {
-        return $this->belongsTo(\App\Models\ContractCategory::class, 'category');
+        return $this->belongsTo(ContractCategory::class, 'category');
     }
 }
