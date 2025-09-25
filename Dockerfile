@@ -1,3 +1,10 @@
+FROM node:18-alpine AS node-builder
+
+WORKDIR /app
+COPY package*.json ./
+
+RUN npm install --no-audit
+
 FROM serversideup/php:8.4-fpm-nginx-alpine AS prod
 
 USER root
