@@ -17,10 +17,11 @@ class ContractCategoryResource extends Resource
 {
     protected static ?string $model = ContractCategory::class;
     protected static ?string $navigationIcon = 'heroicon-o-bookmark';
-    protected static ?string $navigationLabel = 'Categorie Contratti';
+    protected static ?string $navigationLabel = 'Categorie';
     protected static ?string $pluralModelLabel = 'Categorie Contratti';
     protected static ?string $modelLabel = 'Categoria Contratto';
-    protected static ?string $navigationGroup = 'Anagrafica';
+    protected static ?string $navigationGroup = 'Analisi';
+    protected static ?int $navigationSort = 21;
     
     public static function form(Form $form): Form
     {

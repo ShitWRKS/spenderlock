@@ -30,7 +30,10 @@ class AdminPanelProvider extends PanelProvider
     {
         Filament::serving(function () {
             Filament::registerNavigationGroups([
-                'Filament Shield' => 'Amministrazione',
+                'Analisi',
+                'Supply Chain', 
+                'Impostazioni',
+                'Filament Shield' => 'Impostazioni',
             ]);
         });
 
