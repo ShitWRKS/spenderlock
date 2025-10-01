@@ -21,7 +21,8 @@ class ContactResource extends Resource
     protected static ?string $navigationLabel = 'Contatti';
     protected static ?string $pluralModelLabel = 'Contatti';
     protected static ?string $modelLabel = 'Contatto';
-    protected static ?string $navigationGroup = 'Anagrafica';
+    protected static ?string $navigationGroup = 'Supply Chain';
+    protected static ?int $navigationSort = 11;
     public static function form(Form $form): Form
     {
         return $form

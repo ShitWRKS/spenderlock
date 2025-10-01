@@ -21,7 +21,8 @@ class BudgetResource extends Resource
     protected static ?string $navigationLabel = 'Budget';
     protected static ?string $pluralModelLabel = 'Budget';
     protected static ?string $modelLabel = 'Budget';
-    protected static ?string $navigationGroup = 'Area Amministrativa';
+    protected static ?string $navigationGroup = 'Analisi';
+    protected static ?int $navigationSort = 10;
     
     public static function form(Form $form): Form
     {
