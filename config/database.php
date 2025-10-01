@@ -42,6 +42,37 @@ return [
             'synchronous' => null,
         ],
 
+        /**
+         * Connessione Landlord - Database principale che contiene la tabella tenants
+         * e altre informazioni di sistema condivise tra tutti i tenant.
+         */
+        'landlord' => [
+            'driver' => 'sqlite',
+            'url' => env('LANDLORD_DB_URL'),
+            'database' => env('LANDLORD_DB_DATABASE', database_path('landlord.sqlite')),
+            'prefix' => '',
+            'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
+            'busy_timeout' => null,
+            'journal_mode' => null,
+            'synchronous' => null,
+        ],
+
+        /**
+         * Connessione Tenant - Database dinamico che cambia automaticamente
+         * in base al tenant corrente. Il nome del database viene impostato
+         * dinamicamente dal SwitchTenantDatabaseTask.
+         */
+        'tenant' => [
+            'driver' => 'sqlite',
+            'url' => env('TENANT_DB_URL'),
+            'database' => null, // Viene impostato dinamicamente dal package
+            'prefix' => '',
+            'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
+            'busy_timeout' => null,
+            'journal_mode' => null,
+            'synchronous' => null,
+        ],
+
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DB_URL'),
