@@ -5,9 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\ContractCategory;
+use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 
+/**
+ * Modello Contract che utilizza il database tenant.
+ */
 class Contract extends Model
 {
+    use UsesTenantConnection;
+
     protected $fillable = [
         'supplier_id',
         'title',

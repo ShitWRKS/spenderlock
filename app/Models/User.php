@@ -8,11 +8,20 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
+use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 
+/**
+ * Modello User che utilizza il database tenant.
+ * 
+ * Il trait UsesTenantConnection fa sì che questo modello utilizzi
+ * automaticamente la connessione del database tenant corrente.
+ * Non è necessario aggiungere un campo tenant_id - l'isolamento
+ * avviene a livello di database.
+ */
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, Notifiable, HasRoles, UsesTenantConnection;
 
     /**
      * The attributes that are mass assignable.
