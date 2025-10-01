@@ -33,7 +33,6 @@ class AdminPanelProvider extends PanelProvider
                 'Analisi',
                 'Supply Chain', 
                 'Impostazioni',
-                'Filament Shield' => 'Impostazioni',
             ]);
         });
 
