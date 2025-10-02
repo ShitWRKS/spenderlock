@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         /**
          * Middleware per la gestione multi-tenant:
+         * - EnsureTenantExists: Verifica che il tenant esista per il dominio corrente
          * - EnsureValidTenantSession: Verifica che il tenant nella sessione sia valido
          * - NeedsTenant: Assicura che un tenant sia identificato per la richiesta
          * 
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
          * automaticamente il database corrispondente.
          */
         $middleware->web([
+            \App\Http\Middleware\EnsureTenantExists::class,
             \Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession::class,
             \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
         ]);
