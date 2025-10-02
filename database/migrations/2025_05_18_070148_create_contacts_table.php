@@ -12,7 +12,7 @@ return new class extends Migration {
     {
         Schema::create('contacts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('supplier_id')->constrained()->onDelete('cascade');
+                        $table->foreignId('supplier_id')->constrained('suppliers')->onDelete('cascade');
             $table->string('name');
             $table->string('role')->nullable();
             $table->string('email')->nullable();
