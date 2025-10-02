@@ -20,6 +20,12 @@ services:
       - DB_PASSWORD=spenderlock_password
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      # Configurazione Tenant di Default
+      - DEFAULT_TENANT_NAME=SpenderLock Company
+      - DEFAULT_TENANT_DOMAIN=localhost
+      - DEFAULT_ADMIN_NAME=Administrator
+      - DEFAULT_ADMIN_EMAIL=admin@spenderlock.com
+      - DEFAULT_ADMIN_PASSWORD=spenderlock123
     depends_on:
       postgres:
         condition: service_healthy
