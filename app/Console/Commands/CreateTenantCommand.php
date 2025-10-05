@@ -4,112 +4,136 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\Tenant;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 
-/**
- * Comando per creare nuovi tenant con database dedicato.
- * 
- * Questo comando:
- * 1. Crea un nuovo record nella tabella tenants (database landlord)
- * 2. Crea il file database SQLite per il tenant
- * 3. Esegue le migrazioni nel nuovo database tenant
- * 4. Opzionalmente esegue i seeder
- */
 class CreateTenantCommand extends Command
 {
-    /**
-     * The name and signature of the console command.
-     */
     protected $signature = 'tenants:create 
                            {name : Nome del tenant/organizzazione}
-                           {domain : Dominio del tenant (es: azienda1.local)}
+                           {domain : Dominio del tenant}
                            {--seed : Esegui anche i seeder dopo le migrazioni}';
 
-    /**
-     * The console command description.
-     */
     protected $description = 'Crea un nuovo tenant con database dedicato e migrazioni';
 
-    /**
-     * Execute the console command.
-     */
-    public function handle()
+    private ?Tenant $tenant = null;
+    private ?string $databasePath = null;
+
+    public function handle(): int
+    {
+        try {
+            $this->validateTenant();
+            $this->displayTenantInfo();
+            
+            $this->tenant = $this->createTenantRecord();
+            $this->createTenantDatabase();
+            $this->runMigrations();
+            
+            if ($this->option('seed')) {
+                $this->runSeeders();
+            }
+            
+            $this->displaySuccess();
+            
+            return Command::SUCCESS;
+        } catch (\Exception $e) {
+            $this->handleError($e);
+            return Command::FAILURE;
+        }
+    }
+
+    private function validateTenant(): void
+    {
+        $domain = $this->argument('domain');
+        $this->databasePath = $this->generateDatabasePath();
+        
+        if (Tenant::where('domain', $domain)->exists()) {
+            throw new \Exception("Un tenant con dominio '{$domain}' esiste già!");
+        }
+
+        if (File::exists($this->databasePath)) {
+            throw new \Exception("Il database esiste già!");
+        }
+    }
+
+    private function generateDatabasePath(): string
     {
         $name = $this->argument('name');
-        $domain = $this->argument('domain');
-        $runSeeders = $this->option('seed');
+        $sanitized = preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($name));
+        $databaseName = "tenant_{$sanitized}.sqlite";
+        
+        return database_path($databaseName);
+    }
 
-        // Genera il nome del database
-        $databaseName = 'tenant_' . preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($name)) . '.sqlite';
-        $databasePath = database_path($databaseName);
+    private function displayTenantInfo(): void
+    {
+        $this->info("🚀 Creazione tenant: {$this->argument('name')}");
+        $this->line("   📋 Dominio: {$this->argument('domain')}");
+        $this->line("   🗄️  Database: " . basename($this->databasePath));
+    }
 
-        // Verifica che il dominio non esista già
-        if (Tenant::where('domain', $domain)->exists()) {
-            $this->error("Un tenant con dominio '{$domain}' esiste già!");
-            return 1;
+    private function createTenantRecord(): Tenant
+    {
+        $this->line("📝 Creazione record tenant...");
+        
+        return Tenant::create([
+            'name' => $this->argument('name'),
+            'domain' => $this->argument('domain'),
+            'database' => $this->databasePath,
+        ]);
+    }
+
+    private function createTenantDatabase(): void
+    {
+        $this->line("🗄️  Creazione database...");
+        File::put($this->databasePath, '');
+    }
+
+    private function runMigrations(): void
+    {
+        $this->line("⚡ Esecuzione migrazioni...");
+        
+        Artisan::call('tenants:artisan', [
+            'artisanCommand' => 'migrate --database=tenant',
+            '--tenant' => $this->tenant->id,
+        ]);
+    }
+
+    private function runSeeders(): void
+    {
+        $this->line("🌱 Esecuzione seeder...");
+        
+        Artisan::call('tenants:artisan', [
+            'artisanCommand' => 'db:seed --database=tenant',
+            '--tenant' => $this->tenant->id,
+        ]);
+    }
+
+    private function displaySuccess(): void
+    {
+        $this->newLine();
+        $this->info("✅ Tenant '{$this->tenant->name}' creato con successo!");
+        $this->line("🌐 Accedi su: http://{$this->tenant->domain}");
+        $this->line("🆔 ID Tenant: {$this->tenant->id}");
+        $this->newLine();
+    }
+
+    private function handleError(\Exception $e): void
+    {
+        $this->error("❌ Errore: {$e->getMessage()}");
+        $this->cleanup();
+    }
+
+    private function cleanup(): void
+    {
+        $this->line("🧹 Pulizia dati parziali...");
+        
+        if ($this->tenant) {
+            $this->tenant->delete();
         }
-
-        // Verifica che il database non esista già
-        if (File::exists($databasePath)) {
-            $this->error("Il database '{$databaseName}' esiste già!");
-            return 1;
-        }
-
-        $this->info("Creazione tenant: {$name}");
-        $this->info("Dominio: {$domain}");
-        $this->info("Database: {$databaseName}");
-
-        try {
-            // 1. Crea il record tenant nel database landlord
-            $this->info("📝 Creazione record tenant...");
-            $tenant = Tenant::create([
-                'name' => $name,
-                'domain' => $domain,
-                'database' => $databasePath,
-            ]);
-
-            // 2. Crea il file database SQLite
-            $this->info("🗄️  Creazione database tenant...");
-            File::put($databasePath, '');
-
-            // 3. Esegui le migrazioni nel database tenant
-            $this->info("⚡ Esecuzione migrazioni tenant...");
-            Artisan::call('tenants:artisan', [
-                'artisanCommand' => 'migrate --database=tenant',
-                '--tenant' => $tenant->id,
-            ]);
-
-            // 4. Opzionalmente esegui i seeder
-            if ($runSeeders) {
-                $this->info("🌱 Esecuzione seeder tenant...");
-                Artisan::call('tenants:artisan', [
-                    'artisanCommand' => 'db:seed --database=tenant',
-                    '--tenant' => $tenant->id,
-                ]);
-            }
-
-            $this->info("✅ Tenant '{$name}' creato con successo!");
-            $this->info("🌐 Accedi su: http://{$domain}");
-            $this->line("ID Tenant: {$tenant->id}");
-
-            return 0;
-
-        } catch (\Exception $e) {
-            $this->error("❌ Errore durante la creazione del tenant: " . $e->getMessage());
-            
-            // Cleanup in caso di errore
-            if (isset($tenant)) {
-                $this->info("🧹 Pulizia dati parziali...");
-                $tenant->delete();
-            }
-            
-            if (File::exists($databasePath)) {
-                File::delete($databasePath);
-            }
-
-            return 1;
+        
+        if ($this->databasePath && File::exists($this->databasePath)) {
+            File::delete($this->databasePath);
         }
     }
 }

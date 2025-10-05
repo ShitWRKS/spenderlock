@@ -5,187 +5,261 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 
-/**
- * Comando per l'inizializzazione automatica del tenant di default.
- * Utilizzato principalmente durante il setup Docker.
- */
 class SetupDefaultTenantCommand extends Command
 {
     protected $signature = 'tenants:setup-default 
-                           {--tenant-name= : Nome del tenant (default: SpenderLock Demo)}
-                           {--tenant-domain= : Dominio del tenant (default: localhost)}
-                           {--admin-name= : Nome dell\'admin (default: Administrator)}
-                           {--admin-email= : Email dell\'admin (default: admin@localhost)}
-                           {--admin-password= : Password dell\'admin (default: password)}';
+                           {--tenant-name= : Nome del tenant}
+                           {--tenant-domain= : Dominio del tenant}
+                           {--admin-name= : Nome dell\'admin}
+                           {--admin-email= : Email dell\'admin}
+                           {--admin-password= : Password dell\'admin}';
 
     protected $description = 'Setup automatico del tenant di default con admin user';
 
-    public function handle()
+    public function handle(): int
     {
-        $tenantName = $this->option('tenant-name') ?: env('DEFAULT_TENANT_NAME', 'SpenderLock Demo');
-        $tenantDomain = $this->option('tenant-domain') ?: env('DEFAULT_TENANT_DOMAIN', 'localhost');
-        $adminName = $this->option('admin-name') ?: env('DEFAULT_ADMIN_NAME', 'Administrator');
-        $adminEmail = $this->option('admin-email') ?: env('DEFAULT_ADMIN_EMAIL', 'admin@localhost');
-        $adminPassword = $this->option('admin-password') ?: env('DEFAULT_ADMIN_PASSWORD', 'password');
-
-        $this->info("🚀 Setup tenant di default");
-        $this->info("📋 Tenant: {$tenantName} ({$tenantDomain})");
-        $this->info("👤 Admin: {$adminName} ({$adminEmail})");
-
         try {
-            // Verifica se il tenant esiste già
-            $existingTenant = Tenant::where('domain', $tenantDomain)->first();
-            if ($existingTenant) {
-                $this->info("✅ Tenant già esistente (ID: {$existingTenant->id})");
-                $tenant = $existingTenant;
-            } else {
-                // Crea il tenant
-                $tenant = $this->createDefaultTenant($tenantName, $tenantDomain);
-            }
-
-            // Crea l'utente admin se non esiste
-            $this->createDefaultAdmin($tenant, $adminName, $adminEmail, $adminPassword);
-
-            $this->displaySuccess($tenant, $adminEmail, $adminPassword);
-            return 0;
-
+            $config = $this->getConfiguration();
+            $this->displaySetupInfo($config);
+            
+            $tenant = $this->findOrCreateTenant($config['tenant']);
+            $this->createAdminUser($tenant, $config['admin']);
+            
+            $this->displaySuccess($tenant, $config['admin']);
+            
+            return Command::SUCCESS;
         } catch (\Exception $e) {
-            $this->error("❌ Errore durante il setup: " . $e->getMessage());
-            return 1;
+            $this->error("❌ Errore durante il setup: {$e->getMessage()}");
+            return Command::FAILURE;
         }
     }
 
-    private function createDefaultTenant(string $name, string $domain): Tenant
+    private function getConfiguration(): array
     {
-        $this->info("📝 Creazione tenant di default...");
+        return [
+            'tenant' => [
+                'name' => $this->option('tenant-name') ?: env('DEFAULT_TENANT_NAME', 'SpenderLock Demo'),
+                'domain' => $this->option('tenant-domain') ?: env('DEFAULT_TENANT_DOMAIN', 'localhost'),
+            ],
+            'admin' => [
+                'name' => $this->option('admin-name') ?: env('DEFAULT_ADMIN_NAME', 'Administrator'),
+                'email' => $this->option('admin-email') ?: env('DEFAULT_ADMIN_EMAIL', 'admin@localhost'),
+                'password' => $this->option('admin-password') ?: env('DEFAULT_ADMIN_PASSWORD', 'password'),
+            ],
+        ];
+    }
 
-        // Genera il nome del database
-        $databaseName = 'tenant_' . preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($name)) . '.sqlite';
-        $databasePath = database_path($databaseName);
+    private function displaySetupInfo(array $config): void
+    {
+        $this->info("🚀 Setup tenant di default");
+        $this->info("📋 Tenant: {$config['tenant']['name']} ({$config['tenant']['domain']})");
+        $this->info("👤 Admin: {$config['admin']['name']} ({$config['admin']['email']})");
+    }
 
-        // Verifica che il database non esista già
-        if (!\Illuminate\Support\Facades\File::exists($databasePath)) {
-            // Crea il file database SQLite
-            $this->line("   🗄️  Creazione database tenant...");
-            \Illuminate\Support\Facades\File::put($databasePath, '');
+    private function findOrCreateTenant(array $config): Tenant
+    {
+        $tenant = Tenant::where('domain', $config['domain'])->first();
+        
+        if ($tenant) {
+            $this->info("✅ Tenant già esistente (ID: {$tenant->id})");
+            return $tenant;
         }
 
-        // Crea il record tenant nel database landlord
-        $tenant = Tenant::create([
-            'name' => $name,
-            'domain' => $domain,
-            'database' => $databasePath,
-        ]);
+        return $this->createTenant($config);
+    }
 
-        // Esegui le migrazioni nel database tenant (senza interattività)
-        $this->line("   ⚡ Esecuzione migrazioni tenant...");
-        \Illuminate\Support\Facades\Artisan::call('tenants:artisan', [
-            'artisanCommand' => 'migrate --database=tenant --force',
-            '--tenant' => $tenant->id,
-        ]);
-
-        // Genera i permessi con Filament Shield
-        $this->line("   🛡️  Generazione permessi con Shield...");
-        \Illuminate\Support\Facades\Artisan::call('tenants:artisan', [
-            'artisanCommand' => 'shield:generate --all --panel=admin',
-            '--tenant' => $tenant->id,
-        ]);
-
+    private function createTenant(array $config): Tenant
+    {
+        $this->info("📝 Creazione tenant...");
+        
+        $databasePath = $this->createTenantDatabase($config['name']);
+        $tenant = $this->createTenantRecord($config, $databasePath);
+        
+        $this->runTenantMigrations($tenant);
+        $this->generatePermissions($tenant);
+        
         $this->line("   ✅ Tenant creato (ID: {$tenant->id})");
+        
         return $tenant;
     }
 
-    private function createDefaultAdmin(Tenant $tenant, string $name, string $email, string $password): void
+    private function createTenantDatabase(string $name): string
+    {
+        $databaseName = $this->generateDatabaseName($name);
+        $databasePath = database_path($databaseName);
+
+        if (!File::exists($databasePath)) {
+            $this->line("   🗄️  Creazione database...");
+            File::put($databasePath, '');
+        }
+
+        return $databasePath;
+    }
+
+    private function generateDatabaseName(string $name): string
+    {
+        $sanitized = preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($name));
+        return "tenant_{$sanitized}.sqlite";
+    }
+
+    private function createTenantRecord(array $config, string $databasePath): Tenant
+    {
+        return Tenant::create([
+            'name' => $config['name'],
+            'domain' => $config['domain'],
+            'database' => $databasePath,
+        ]);
+    }
+
+    private function runTenantMigrations(Tenant $tenant): void
+    {
+        $this->line("   ⚡ Esecuzione migrazioni...");
+        
+        Artisan::call('tenants:artisan', [
+            'artisanCommand' => 'migrate --database=tenant --force',
+            '--tenant' => $tenant->id,
+        ]);
+    }
+
+    private function generatePermissions(Tenant $tenant): void
+    {
+        $this->line("   🛡️  Generazione permessi...");
+        
+        Artisan::call('tenants:artisan', [
+            'artisanCommand' => 'shield:generate --all --panel=admin',
+            '--tenant' => $tenant->id,
+        ]);
+    }
+
+    private function createAdminUser(Tenant $tenant, array $config): void
     {
         $this->info("👤 Verifica/creazione utente admin...");
 
-        // Switch al database del tenant
         $tenant->makeCurrent();
 
         try {
-            // Verifica se l'utente admin esiste già
-            $existingUser = User::where('email', $email)->first();
-            if ($existingUser) {
+            if ($this->adminExists($config['email'])) {
                 $this->info("   ✅ Utente admin già esistente");
                 return;
             }
 
-            // Crea l'utente
-            $user = User::create([
-                'name' => $name,
-                'email' => $email,
-                'password' => Hash::make($password),
-            ]);
-
-            // Assicura che esistano permessi e ruoli
-            $this->ensurePermissionsAndRoleExist();
+            $user = $this->createUser($config);
+            $this->assignSuperAdminRole($user);
             
-            // Ottieni il ruolo super_admin dal database tenant
-            $superAdminRole = Role::on('tenant')->where('name', 'super_admin')->first();
-            if ($superAdminRole) {
-                $user->assignRole($superAdminRole);
-            }
-
             $this->line("   ✅ Utente admin creato");
-
         } finally {
-            // Reset del tenant
             Tenant::forgetCurrent();
         }
     }
 
-    /**
-     * Assicura che esista il ruolo super_admin nel tenant.
-     * I permessi sono già stati generati da Shield durante la creazione del tenant.
-     */
-    private function ensurePermissionsAndRoleExist(): void
+    private function adminExists(string $email): bool
     {
-        // Controlla se esiste il ruolo super_admin nel database tenant
-        $superAdminRole = Role::on('tenant')->where('name', 'super_admin')->first();
-        
-        if (!$superAdminRole) {
-            $this->line("   👑 Creazione ruolo super_admin...");
-            
-            // Crea il ruolo super_admin sul database tenant
-            $superAdminRole = new Role([
-                'name' => 'super_admin',
-                'guard_name' => 'web'
-            ]);
-            $superAdminRole->setConnection('tenant');
-            $superAdminRole->save();
+        return User::where('email', $email)->exists();
+    }
 
-            // Assegna tutti i permessi al ruolo
-            $allPermissions = Permission::on('tenant')->get();
-            if ($allPermissions->isNotEmpty()) {
-                $superAdminRole->givePermissionTo($allPermissions);
-                $this->line("   ✅ Ruolo super_admin creato con {$allPermissions->count()} permessi");
-            }
+    private function createUser(array $config): User
+    {
+        return User::create([
+            'name' => $config['name'],
+            'email' => $config['email'],
+            'password' => Hash::make($config['password']),
+        ]);
+    }
+
+    private function assignSuperAdminRole(User $user): void
+    {
+        $role = $this->ensureSuperAdminRoleExists();
+        
+        if ($role) {
+            $user->assignRole($role);
         }
     }
 
-    private function displaySuccess(Tenant $tenant, string $adminEmail, string $adminPassword): void
+    private function ensureSuperAdminRoleExists(): ?Role
     {
-        $this->line("");
-        $this->info("🎉 Setup completato con successo!");
-        $this->line("");
+        $role = Role::on('tenant')->where('name', 'super_admin')->first();
         
+        if ($role) {
+            return $role;
+        }
+
+        return $this->createSuperAdminRole();
+    }
+
+    private function createSuperAdminRole(): Role
+    {
+        $this->line("   👑 Creazione ruolo super_admin...");
+        
+        $role = $this->createRole();
+        $this->assignAllPermissionsToRole($role);
+        
+        return $role;
+    }
+
+    private function createRole(): Role
+    {
+        $role = new Role([
+            'name' => 'super_admin',
+            'guard_name' => 'web'
+        ]);
+        
+        $role->setConnection('tenant');
+        $role->save();
+        
+        return $role;
+    }
+
+    private function assignAllPermissionsToRole(Role $role): void
+    {
+        $permissions = Permission::on('tenant')->get();
+        
+        if ($permissions->isNotEmpty()) {
+            $role->givePermissionTo($permissions);
+            $this->line("   ✅ Assegnati {$permissions->count()} permessi");
+        }
+    }
+
+    private function displaySuccess(Tenant $tenant, array $adminConfig): void
+    {
+        $this->newLine();
+        $this->info("🎉 Setup completato con successo!");
+        $this->newLine();
+        
+        $this->displayConfigurationTable($tenant, $adminConfig);
+        $this->displayLoginInstructions($tenant, $adminConfig['email'], $adminConfig['password']);
+    }
+
+    private function displayConfigurationTable(Tenant $tenant, array $adminConfig): void
+    {
         $this->table(['Configurazione', 'Valore'], [
             ['Tenant Name', $tenant->name],
             ['Tenant Domain', $tenant->domain],
             ['Tenant ID', $tenant->id],
-            ['Admin Email', $adminEmail],
-            ['Admin Password', $adminPassword],
-            ['Admin Panel URL', "http://{$tenant->domain}/admin"],
+            ['Admin Email', $adminConfig['email']],
+            ['Admin Password', $adminConfig['password']],
+            ['Admin Panel URL', $this->getAdminUrl($tenant)],
         ]);
+    }
 
-        $this->line("");
+    private function displayLoginInstructions(Tenant $tenant, string $email, string $password): void
+    {
+        $url = $this->getAdminUrl($tenant);
+        
+        $this->newLine();
         $this->comment("💡 Per accedere:");
-        $this->line("1. Visita: http://{$tenant->domain}/admin");
-        $this->line("2. Login: {$adminEmail} / {$adminPassword}");
-        $this->line("");
+        $this->line("1. Visita: {$url}");
+        $this->line("2. Login: {$email} / {$password}");
+        $this->newLine();
+    }
+
+    private function getAdminUrl(Tenant $tenant): string
+    {
+        return "http://{$tenant->domain}/admin";
     }
 }

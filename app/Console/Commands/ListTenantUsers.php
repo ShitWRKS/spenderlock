@@ -11,36 +11,52 @@ class ListTenantUsers extends Command
     protected $signature = 'tenants:list-users {tenant : ID o dominio del tenant}';
     protected $description = 'Elenca gli utenti in un tenant specifico';
 
-    public function handle()
+    public function handle(): int
     {
-        $tenantIdentifier = $this->argument('tenant');
+        $tenant = $this->findTenant($this->argument('tenant'));
         
-        $tenant = is_numeric($tenantIdentifier) 
-            ? Tenant::find($tenantIdentifier)
-            : Tenant::where('domain', $tenantIdentifier)->first();
-
         if (!$tenant) {
-            $this->error("Tenant '{$tenantIdentifier}' non trovato!");
-            return 1;
+            $this->error("❌ Tenant '{$this->argument('tenant')}' non trovato!");
+            return Command::FAILURE;
         }
 
         $tenant->makeCurrent();
         
-        $users = User::with('roles')->get();
-        
-        $this->info("Utenti nel tenant: {$tenant->name} ({$tenant->domain})");
-        $this->line("👥 Totale utenti: {$users->count()}");
-        $this->line("");
+        try {
+            $users = User::with('roles')->get();
+            $this->displayUsers($tenant, $users);
+            
+            return Command::SUCCESS;
+        } finally {
+            Tenant::forgetCurrent();
+        }
+    }
+
+    private function findTenant(string $identifier): ?Tenant
+    {
+        return is_numeric($identifier) 
+            ? Tenant::find($identifier)
+            : Tenant::where('domain', $identifier)->first();
+    }
+
+    private function displayUsers(Tenant $tenant, $users): void
+    {
+        $this->info("👥 Utenti nel tenant: {$tenant->name} ({$tenant->domain})");
+        $this->line("� Totale: {$users->count()}");
+        $this->newLine();
         
         foreach ($users as $user) {
-            $roles = $user->roles->pluck('name')->join(', ') ?: 'Nessun ruolo';
-            $this->line("👤 {$user->name}");
-            $this->line("   📧 {$user->email}");
-            $this->line("   🛡️  Ruoli: {$roles}");
-            $this->line("");
+            $this->displayUser($user);
         }
+    }
+
+    private function displayUser(User $user): void
+    {
+        $roles = $user->roles->pluck('name')->join(', ') ?: 'Nessun ruolo';
         
-        Tenant::forgetCurrent();
-        return 0;
+        $this->line("👤 {$user->name}");
+        $this->line("   📧 {$user->email}");
+        $this->line("   🛡️  Ruoli: {$roles}");
+        $this->newLine();
     }
 }

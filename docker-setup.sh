@@ -10,6 +10,10 @@ echo "=================================="
 echo "⏳ Attesa connessione database..."
 sleep 5
 
+# Esegui migrazioni base
+echo "📋 Esecuzione migrazioni landlord..."
+php artisan migrate --force
+
 # Esegui migrazioni del landlord
 echo "📋 Esecuzione migrazioni landlord..."
 php artisan migrate --database=landlord --path=database/migrations/landlord --force
@@ -20,5 +24,5 @@ php artisan tenants:setup-default
 
 echo "✅ Setup completato!"
 echo "🌐 Accedi su: http://localhost/admin"
-echo "📧 Email: ${DEFAULT_ADMIN_EMAIL:-admin@spenderlock.com}"
-echo "🔑 Password: ${DEFAULT_ADMIN_PASSWORD:-spenderlock123}"
+echo "📧 Email: ${DEFAULT_ADMIN_EMAIL}"
+echo "🔑 Password: ${DEFAULT_ADMIN_PASSWORD}"
