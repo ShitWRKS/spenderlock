@@ -88,6 +88,13 @@ class SetupDefaultTenantCommand extends Command
             '--tenant' => $tenant->id,
         ]);
 
+        // Genera i permessi con Filament Shield
+        $this->line("   🛡️  Generazione permessi con Shield...");
+        \Illuminate\Support\Facades\Artisan::call('tenants:artisan', [
+            'artisanCommand' => 'shield:generate --all --panel=admin',
+            '--tenant' => $tenant->id,
+        ]);
+
         $this->line("   ✅ Tenant creato (ID: {$tenant->id})");
         return $tenant;
     }
@@ -132,18 +139,11 @@ class SetupDefaultTenantCommand extends Command
     }
 
     /**
-     * Assicura che esistano tutti i permessi e il ruolo super_admin nel tenant.
+     * Assicura che esista il ruolo super_admin nel tenant.
+     * I permessi sono già stati generati da Shield durante la creazione del tenant.
      */
     private function ensurePermissionsAndRoleExist(): void
     {
-        // Controlla se esistono già permessi nel database tenant
-        $existingPermissions = Permission::on('tenant')->count();
-        
-        if ($existingPermissions === 0) {
-            $this->line("   📋 Creazione permessi base...");
-            $this->createFallbackPermissions();
-        }
-
         // Controlla se esiste il ruolo super_admin nel database tenant
         $superAdminRole = Role::on('tenant')->where('name', 'super_admin')->first();
         
@@ -162,55 +162,8 @@ class SetupDefaultTenantCommand extends Command
             $allPermissions = Permission::on('tenant')->get();
             if ($allPermissions->isNotEmpty()) {
                 $superAdminRole->givePermissionTo($allPermissions);
+                $this->line("   ✅ Ruolo super_admin creato con {$allPermissions->count()} permessi");
             }
-        }
-    }
-
-    /**
-     * Crea permessi base di fallback
-     */
-    private function createFallbackPermissions(): void
-    {
-        $basicPermissions = [
-            // Budget permissions
-            'view_any_budget', 'view_budget', 'create_budget', 'update_budget', 'delete_budget', 'delete_any_budget',
-            'restore_budget', 'restore_any_budget', 'replicate_budget', 'reorder_budget', 'force_delete_budget', 'force_delete_any_budget',
-            
-            // Contact permissions
-            'view_any_contact', 'view_contact', 'create_contact', 'update_contact', 'delete_contact', 'delete_any_contact',
-            'restore_contact', 'restore_any_contact', 'replicate_contact', 'reorder_contact', 'force_delete_contact', 'force_delete_any_contact',
-            
-            // Contract permissions
-            'view_any_contract', 'view_contract', 'create_contract', 'update_contract', 'delete_contract', 'delete_any_contract',
-            'restore_contract', 'restore_any_contract', 'replicate_contract', 'reorder_contract', 'force_delete_contract', 'force_delete_any_contract',
-            
-            // Contract Category permissions
-            'view_any_contract::category', 'view_contract::category', 'create_contract::category', 'update_contract::category', 
-            'delete_contract::category', 'delete_any_contract::category', 'restore_contract::category', 'restore_any_contract::category',
-            'replicate_contract::category', 'reorder_contract::category', 'force_delete_contract::category', 'force_delete_any_contract::category',
-            
-            // Supplier permissions
-            'view_any_supplier', 'view_supplier', 'create_supplier', 'update_supplier', 'delete_supplier', 'delete_any_supplier',
-            'restore_supplier', 'restore_any_supplier', 'replicate_supplier', 'reorder_supplier', 'force_delete_supplier', 'force_delete_any_supplier',
-            
-            // User permissions
-            'view_any_user', 'view_user', 'create_user', 'update_user', 'delete_user', 'delete_any_user',
-            'restore_user', 'restore_any_user', 'replicate_user', 'reorder_user', 'force_delete_user', 'force_delete_any_user',
-            
-            // Role permissions
-            'view_any_role', 'view_role', 'create_role', 'update_role', 'delete_role', 'delete_any_role',
-            
-            // Widget permissions
-            'widget_TotaleSpesoPerAnno', 'widget_UpcomingContracts', 'widget_ContrattiCalendarWidget',
-        ];
-
-        foreach ($basicPermissions as $permission) {
-            $perm = new Permission([
-                'name' => $permission,
-                'guard_name' => 'web'
-            ]);
-            $perm->setConnection('tenant');
-            $perm->save();
         }
     }
 
