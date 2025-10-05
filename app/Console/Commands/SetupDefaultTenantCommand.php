@@ -63,20 +63,30 @@ class SetupDefaultTenantCommand extends Command
     {
         $this->info("📝 Creazione tenant di default...");
 
-        // Usa il comando esistente per creare il tenant
-        $exitCode = \Illuminate\Support\Facades\Artisan::call('tenants:create', [
+        // Genera il nome del database
+        $databaseName = 'tenant_' . preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($name)) . '.sqlite';
+        $databasePath = database_path($databaseName);
+
+        // Verifica che il database non esista già
+        if (!\Illuminate\Support\Facades\File::exists($databasePath)) {
+            // Crea il file database SQLite
+            $this->line("   🗄️  Creazione database tenant...");
+            \Illuminate\Support\Facades\File::put($databasePath, '');
+        }
+
+        // Crea il record tenant nel database landlord
+        $tenant = Tenant::create([
             'name' => $name,
             'domain' => $domain,
+            'database' => $databasePath,
         ]);
 
-        if ($exitCode !== 0) {
-            throw new \Exception("Fallimento nella creazione del tenant");
-        }
-
-        $tenant = Tenant::where('domain', $domain)->first();
-        if (!$tenant) {
-            throw new \Exception("Tenant creato ma non trovato nel database");
-        }
+        // Esegui le migrazioni nel database tenant (senza interattività)
+        $this->line("   ⚡ Esecuzione migrazioni tenant...");
+        \Illuminate\Support\Facades\Artisan::call('tenants:artisan', [
+            'artisanCommand' => 'migrate --database=tenant --force',
+            '--tenant' => $tenant->id,
+        ]);
 
         $this->line("   ✅ Tenant creato (ID: {$tenant->id})");
         return $tenant;
@@ -97,17 +107,20 @@ class SetupDefaultTenantCommand extends Command
                 return;
             }
 
-            // Usa il comando esistente per creare l'utente admin
-            $exitCode = \Illuminate\Support\Facades\Artisan::call('tenants:create-user', [
-                'tenant' => $tenant->id,
+            // Crea l'utente
+            $user = User::create([
                 'name' => $name,
                 'email' => $email,
-                'password' => $password,
-                '--admin' => true,
+                'password' => Hash::make($password),
             ]);
 
-            if ($exitCode !== 0) {
-                throw new \Exception("Fallimento nella creazione dell'utente admin");
+            // Assicura che esistano permessi e ruoli
+            $this->ensurePermissionsAndRoleExist();
+            
+            // Ottieni il ruolo super_admin dal database tenant
+            $superAdminRole = Role::on('tenant')->where('name', 'super_admin')->first();
+            if ($superAdminRole) {
+                $user->assignRole($superAdminRole);
             }
 
             $this->line("   ✅ Utente admin creato");
@@ -115,6 +128,89 @@ class SetupDefaultTenantCommand extends Command
         } finally {
             // Reset del tenant
             Tenant::forgetCurrent();
+        }
+    }
+
+    /**
+     * Assicura che esistano tutti i permessi e il ruolo super_admin nel tenant.
+     */
+    private function ensurePermissionsAndRoleExist(): void
+    {
+        // Controlla se esistono già permessi nel database tenant
+        $existingPermissions = Permission::on('tenant')->count();
+        
+        if ($existingPermissions === 0) {
+            $this->line("   📋 Creazione permessi base...");
+            $this->createFallbackPermissions();
+        }
+
+        // Controlla se esiste il ruolo super_admin nel database tenant
+        $superAdminRole = Role::on('tenant')->where('name', 'super_admin')->first();
+        
+        if (!$superAdminRole) {
+            $this->line("   👑 Creazione ruolo super_admin...");
+            
+            // Crea il ruolo super_admin sul database tenant
+            $superAdminRole = new Role([
+                'name' => 'super_admin',
+                'guard_name' => 'web'
+            ]);
+            $superAdminRole->setConnection('tenant');
+            $superAdminRole->save();
+
+            // Assegna tutti i permessi al ruolo
+            $allPermissions = Permission::on('tenant')->get();
+            if ($allPermissions->isNotEmpty()) {
+                $superAdminRole->givePermissionTo($allPermissions);
+            }
+        }
+    }
+
+    /**
+     * Crea permessi base di fallback
+     */
+    private function createFallbackPermissions(): void
+    {
+        $basicPermissions = [
+            // Budget permissions
+            'view_any_budget', 'view_budget', 'create_budget', 'update_budget', 'delete_budget', 'delete_any_budget',
+            'restore_budget', 'restore_any_budget', 'replicate_budget', 'reorder_budget', 'force_delete_budget', 'force_delete_any_budget',
+            
+            // Contact permissions
+            'view_any_contact', 'view_contact', 'create_contact', 'update_contact', 'delete_contact', 'delete_any_contact',
+            'restore_contact', 'restore_any_contact', 'replicate_contact', 'reorder_contact', 'force_delete_contact', 'force_delete_any_contact',
+            
+            // Contract permissions
+            'view_any_contract', 'view_contract', 'create_contract', 'update_contract', 'delete_contract', 'delete_any_contract',
+            'restore_contract', 'restore_any_contract', 'replicate_contract', 'reorder_contract', 'force_delete_contract', 'force_delete_any_contract',
+            
+            // Contract Category permissions
+            'view_any_contract::category', 'view_contract::category', 'create_contract::category', 'update_contract::category', 
+            'delete_contract::category', 'delete_any_contract::category', 'restore_contract::category', 'restore_any_contract::category',
+            'replicate_contract::category', 'reorder_contract::category', 'force_delete_contract::category', 'force_delete_any_contract::category',
+            
+            // Supplier permissions
+            'view_any_supplier', 'view_supplier', 'create_supplier', 'update_supplier', 'delete_supplier', 'delete_any_supplier',
+            'restore_supplier', 'restore_any_supplier', 'replicate_supplier', 'reorder_supplier', 'force_delete_supplier', 'force_delete_any_supplier',
+            
+            // User permissions
+            'view_any_user', 'view_user', 'create_user', 'update_user', 'delete_user', 'delete_any_user',
+            'restore_user', 'restore_any_user', 'replicate_user', 'reorder_user', 'force_delete_user', 'force_delete_any_user',
+            
+            // Role permissions
+            'view_any_role', 'view_role', 'create_role', 'update_role', 'delete_role', 'delete_any_role',
+            
+            // Widget permissions
+            'widget_TotaleSpesoPerAnno', 'widget_UpcomingContracts', 'widget_ContrattiCalendarWidget',
+        ];
+
+        foreach ($basicPermissions as $permission) {
+            $perm = new Permission([
+                'name' => $permission,
+                'guard_name' => 'web'
+            ]);
+            $perm->setConnection('tenant');
+            $perm->save();
         }
     }
 

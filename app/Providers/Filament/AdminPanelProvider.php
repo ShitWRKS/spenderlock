@@ -72,7 +72,6 @@ class AdminPanelProvider extends PanelProvider
                 FilamentShieldPlugin::make(),
                 FilamentFullCalendarPlugin::make(),
                 FilamentUsersPlugin::make(),
-
             ])
             ->authMiddleware([
                 Authenticate::class,

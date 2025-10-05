@@ -92,6 +92,18 @@ Poi vai su http://localhost/admin e usa:
    ```
 
 5. **Crea tenant e utente admin**
+   
+   **Metodo rapido (raccomandato):**
+   ```bash
+   php artisan tenants:setup-default \
+     --tenant-name="La Tua Azienda" \
+     --tenant-domain="localhost" \
+     --admin-name="Administrator" \
+     --admin-email="admin@localhost" \
+     --admin-password="password123"
+   ```
+   
+   **Metodo manuale (step by step):**
    ```bash
    php artisan tenants:create "La Tua Azienda" "localhost"
    php artisan tenants:create-user 1 "Administrator" "admin@localhost" "password123" --admin
@@ -113,6 +125,14 @@ Poi vai su http://localhost/admin e usa:
 ### Comandi Principali
 
 ```bash
+# Setup tenant di default con admin (raccomandato per primo setup)
+php artisan tenants:setup-default \
+  --tenant-name="La Tua Azienda" \
+  --tenant-domain="localhost" \
+  --admin-name="Administrator" \
+  --admin-email="admin@localhost" \
+  --admin-password="password"
+
 # Crea un nuovo tenant
 php artisan tenants:create "Nome Azienda" "dominio.local"
 
@@ -122,15 +142,48 @@ php artisan tenants:create-user 1 "Admin" "admin@domain.com" "password" --admin
 # Crea utente normale per un tenant
 php artisan tenants:create-user 1 "User" "user@domain.com" "password"
 
-# Setup tenant di default (usato da Docker)
-php artisan tenants:setup-default
-
 # Esegui comandi per tutti i tenant
 php artisan tenants:artisan "migrate"
 
 # Esegui comando per tenant specifico
 php artisan tenants:artisan "db:seed" --tenant=1
 ```
+
+### Setup Tenant di Default
+
+Il comando `tenants:setup-default` è ideale per il primo setup o per deploy automatizzati (Docker):
+
+**Con parametri espliciti:**
+```bash
+php artisan tenants:setup-default \
+  --tenant-name="SpenderLock Demo" \
+  --tenant-domain="localhost" \
+  --admin-name="Administrator" \
+  --admin-email="admin@localhost" \
+  --admin-password="password123"
+```
+
+**Con variabili d'ambiente (.env):**
+```bash
+# Nel file .env
+DEFAULT_TENANT_NAME="La Tua Azienda"
+DEFAULT_TENANT_DOMAIN="localhost"
+DEFAULT_ADMIN_NAME="Administrator"
+DEFAULT_ADMIN_EMAIL="admin@tuaazienda.com"
+DEFAULT_ADMIN_PASSWORD="password-sicura"
+
+# Poi esegui
+php artisan tenants:setup-default
+```
+
+**Caratteristiche:**
+- ✅ Crea automaticamente il tenant se non esiste
+- ✅ Crea il database SQLite del tenant
+- ✅ Esegue le migrazioni del tenant
+- ✅ Crea l'utente admin con ruolo super_admin
+- ✅ Genera automaticamente permessi e ruoli
+- ✅ Idempotente: può essere eseguito più volte senza errori
+- ✅ Non richiede interazione utente (perfetto per Docker/CI)
 
 ### Configurazione Domini Locali
 
@@ -215,15 +268,29 @@ php artisan tenants:artisan "shield:generate --all --panel=admin"
 ### Server Tradizionale
 
 1. **Setup server** con PHP 8.4+, PostgreSQL, Redis
-2. **Deploy codice** e installa dipendenze
-3. **Configura database** e esegui migrazioni
+2. **Deploy codice** e installa dipendenze:
+   ```bash
+   composer install --optimize-autoloader --no-dev
+   npm install && npm run build
+   ```
+3. **Configura database** e esegui migrazioni:
+   ```bash
+   php artisan migrate --database=landlord --path=database/migrations/landlord
+   ```
 4. **Setup tenant di default**:
    ```bash
    php artisan tenants:setup-default \
      --tenant-name="Tua Azienda" \
      --tenant-domain="tuodominio.com" \
+     --admin-name="Admin" \
      --admin-email="admin@tuodominio.com" \
      --admin-password="password-sicura"
+   ```
+5. **Ottimizza per produzione**:
+   ```bash
+   php artisan config:cache
+   php artisan route:cache
+   php artisan view:cache
    ```
 
 ## 🔒 Sicurezza
