@@ -68,10 +68,40 @@ class SetupDefaultTenantCommand extends Command
         
         if ($tenant) {
             $this->info("✅ Tenant già esistente (ID: {$tenant->id})");
+            $this->ensureTenantDatabaseExists($tenant, $config['name']);
             return $tenant;
         }
 
         return $this->createTenant($config);
+    }
+
+    private function ensureTenantDatabaseExists(Tenant $tenant, string $name): void
+    {
+        // Ricostruisci il path corretto del database per l'ambiente corrente
+        $databaseName = $this->generateDatabaseName($name);
+        $correctPath = database_path($databaseName);
+        
+        // Aggiorna il path nel record del tenant se è cambiato
+        if ($tenant->database !== $correctPath) {
+            $this->line("   🔄 Aggiornamento path database...");
+            $tenant->update(['database' => $correctPath]);
+        }
+        
+        // Crea il database se non esiste
+        if (!File::exists($correctPath)) {
+            $this->line("   🗄️  Database tenant mancante, creazione in corso...");
+            
+            // Assicura che la directory esista
+            $directory = dirname($correctPath);
+            if (!File::isDirectory($directory)) {
+                File::makeDirectory($directory, 0755, true);
+            }
+            
+            File::put($correctPath, '');
+            $this->runTenantMigrations($tenant);
+            $this->generatePermissions($tenant);
+            $this->line("   ✅ Database ricreato");
+        }
     }
 
     private function createTenant(array $config): Tenant

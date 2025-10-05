@@ -9,6 +9,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 
 /**
  * Modello User che utilizza il database tenant.
@@ -18,7 +20,7 @@ use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
  * Non è necessario aggiungere un campo tenant_id - l'isolamento
  * avviene a livello di database.
  */
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, HasRoles, UsesTenantConnection;
@@ -55,5 +57,10 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return true;
     }
 }

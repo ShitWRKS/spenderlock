@@ -29,14 +29,19 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progre
 COPY --chown=www-data:www-data . /var/www/html
 
 # Copia e rendi eseguibile lo script di setup
-COPY --chown=www-data:www-data docker-setup.sh /var/www/html/
-RUN chmod +x /var/www/html/docker-setup.sh
+COPY --chown=www-data:www-data --chmod=755 docker-setup.sh /var/www/html/
+
+# Copia l'hook di entrypoint per l'esecuzione automatica
+USER root
+COPY --chmod=755 .docker/entrypoint.d/50-setup-tenant.sh /etc/entrypoint.d/
+USER www-data
 
 WORKDIR /var/www/html
 
 # Assicurati che bootstrap/cache esista e sia scrivibile
 RUN mkdir -p bootstrap/cache && \
     chown -R www-data:www-data bootstrap/cache && \
-    chmod -R 775 bootstrap/cache
+    chmod -R 775 bootstrap/cache && \
+    rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
     
 STOPSIGNAL SIGTERM

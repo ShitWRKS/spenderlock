@@ -1,0 +1,33 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: prod
+    ports:
+      - "80:8080"
+    environment:
+      # Genera con il comando ' echo "base64:$(openssl rand -base64 32)" '
+      - APP_KEY=base64:3krJC5Gkn6hkq2cxy08Z5G0xYVBv5AeNCn9nOHV8CME= 
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_CONNECTION=sqlite
+      # Configurazione Tenant di Default
+      - DEFAULT_TENANT_NAME="Demo Company"
+      - DEFAULT_TENANT_DOMAIN=demo.local
+      - DEFAULT_ADMIN_NAME=ADMIN
+      - DEFAULT_ADMIN_EMAIL=admin@spenderlock.com
+      - DEFAULT_ADMIN_PASSWORD=spenderlock123
+    volumes:
+      - storage_data:/var/www/html/storage
+    networks:
+      - spenderlock-network
+    restart: unless-stopped
+
+volumes:
+  storage_data:
+    driver: local
+
+networks:
+  spenderlock-network:
+    driver: bridge

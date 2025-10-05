@@ -22,7 +22,7 @@ class BudgetResource extends Resource
     protected static ?string $pluralModelLabel = 'Budget';
     protected static ?string $modelLabel = 'Budget';
     protected static ?string $navigationGroup = 'Analisi';
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 1;
     
     public static function form(Form $form): Form
     {

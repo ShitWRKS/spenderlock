@@ -21,7 +21,8 @@ class ContractCategoryResource extends Resource
     protected static ?string $pluralModelLabel = 'Categorie Contratti';
     protected static ?string $modelLabel = 'Categoria Contratto';
     protected static ?string $navigationGroup = 'Analisi';
-    protected static ?int $navigationSort = 21;
+    protected static ?string $navigationParentItem = 'Contratti';
+    protected static ?int $navigationSort = 3;
     
     public static function form(Form $form): Form
     {

@@ -65,7 +65,7 @@ return [
      * ---------------------------------------------
      * if you when to custom the team model path
      */
-    'team_model' => \App\Models\Team::class,
+    //'team_model' => \App\Models\Team::class,
 
     /**
      * ---------------------------------------------
