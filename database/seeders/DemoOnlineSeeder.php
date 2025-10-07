@@ -89,11 +89,12 @@ class DemoOnlineSeeder extends Seeder
             return Budget::firstOrCreate(['year' => $payload['year'], 'category' => $payload['category']], $payload);
         });
 
-        // Contacts
+        // Contacts (assign to an existing supplier to satisfy NOT NULL constraint)
         $contacts = collect([
             ['name' => 'Luca Rossi', 'email' => 'luca.rossi@example.com', 'phone' => '+39 012 3456'],
             ['name' => 'Maria Bianchi', 'email' => 'maria.bianchi@example.com', 'phone' => '+39 098 7654'],
-        ])->map(function ($data) {
+        ])->map(function ($data) use ($suppliers) {
+            $data['supplier_id'] = $suppliers->first()->id ?? null;
             return Contact::firstOrCreate(['email' => $data['email']], $data);
         });
 
