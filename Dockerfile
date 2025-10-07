@@ -2,8 +2,13 @@ FROM node:18-alpine AS node-builder
 
 WORKDIR /app
 COPY package*.json ./
+COPY vite.config.js ./
+COPY resources resources
+COPY public public
 
-RUN npm install --no-audit
+# Install node deps and build frontend assets
+RUN npm ci --no-audit --no-fund && \
+    npm run build
 
 FROM serversideup/php:8.4-fpm-nginx-alpine AS prod
 
@@ -27,6 +32,9 @@ WORKDIR /var/www/html
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 
 COPY --chown=www-data:www-data . /var/www/html
+
+# Copia gli asset frontend buildati dalla stage node-builder
+COPY --from=node-builder --chown=www-data:www-data /app/public /var/www/html/public
 
 # Copia e rendi eseguibile lo script di setup
 COPY --chown=www-data:www-data --chmod=755 docker-setup.sh /var/www/html/
