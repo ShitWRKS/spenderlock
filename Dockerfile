@@ -1,4 +1,4 @@
-FROM node:18-alpine AS node-builder
+FROM node:24-alpine AS node-builder
 
 WORKDIR /app
 COPY package*.json ./
@@ -7,7 +7,7 @@ COPY resources resources
 COPY public public
 
 # Install node deps and build frontend assets
-RUN npm ci && \
+RUN npm clean-install && \
     npm run build
 
 FROM serversideup/php:8.4-fpm-nginx-alpine AS prod
