@@ -7,7 +7,7 @@ COPY resources resources
 COPY public public
 
 # Install node deps and build frontend assets
-RUN npm ci --no-audit --no-fund && \
+RUN npm ci && \
     npm run build
 
 FROM serversideup/php:8.4-fpm-nginx-alpine AS prod
