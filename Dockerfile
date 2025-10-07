@@ -33,6 +33,8 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progre
 
 COPY --chown=www-data:www-data . /var/www/html
 
+RUN php artisan filament:assets
+
 # Copia gli asset frontend buildati dalla stage node-builder
 COPY --from=node-builder --chown=www-data:www-data /app/public /var/www/html/public
 
