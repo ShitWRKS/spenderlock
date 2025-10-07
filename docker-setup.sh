@@ -34,6 +34,11 @@ php artisan tenants:setup-default \
     --admin-email="${DEFAULT_ADMIN_EMAIL:-admin@localhost}" \
     --admin-password="${DEFAULT_ADMIN_PASSWORD:-password}"
 
+# Esegui i seed demo per il tenant appena creato (esegui il comando nel contesto del tenant)
+echo "📦 Esecuzione demo seeder nel contesto del tenant..."
+php artisan tenants:artisan "db:seed --class=Database\\Seeders\\DemoOnlineSeeder --force" --tenant="${DEFAULT_TENANT_DOMAIN}" || \
+    echo "⚠️  Seeder DemoOnline non eseguito (controlla che la classe esista o che il tenant sia impostato)"
+
 echo ""
 echo "✅ Setup completato!"
 echo "🌐 Accedi su: http://${DEFAULT_TENANT_DOMAIN}/admin"
