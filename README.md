@@ -27,7 +27,7 @@ SpenderLock è un sistema di gestione contratti e budget multi-tenant sviluppato
 
 **🚀 Quick Start (5 minuti):**
 ```bash
-git clone <repository-url>
+git clone https://github.com/ShitWRKS/spenderlock
 cd spenderlock
 docker-compose up -d --build
 ```
@@ -39,7 +39,7 @@ Poi vai su http://localhost/admin e usa:
 
 1. **Clona il repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/ShitWRKS/spenderlock
    cd spenderlock
    ```
 
@@ -69,7 +69,7 @@ Poi vai su http://localhost/admin e usa:
 
 1. **Clona il repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/ShitWRKS/spenderlock
    cd spenderlock
    ```
 
@@ -292,6 +292,43 @@ php artisan tenants:artisan "shield:generate --all --panel=admin"
    php artisan route:cache
    php artisan view:cache
    ```
+
+### Installer PHP (senza Docker)
+
+Per un deploy leggero puoi utilizzare il wizard `public/installer.php`, pensato per ambienti condivisi dove non hai Docker a disposizione.
+
+1. **Prepara il server**
+   - PHP 8.2+ con estensioni: `bcmath`, `ctype`, `fileinfo`, `json`, `mbstring`, `openssl`, `pdo`, `pdo_sqlite`, `sqlite3`, `tokenizer`, `xml`
+   - Composer, Node.js (>= 18) e npm (>= 9) disponibili nel `PATH`
+   - Directory `storage/` e `bootstrap/cache/` scrivibili
+
+2. **Carica il codice sorgente**
+   - Sincronizza il repository sul server (via Git o deploy tool)
+   - Assicurati che `public/installer.php` sia presente (non cancellarlo prima del primo avvio)
+
+3. **Configura CloudPanel / PHP-FPM**
+   - Crea un nuovo vhost puntando la document root a `public/`
+   - Seleziona PHP 8.2+ con le estensioni richieste
+   - Assicurati che l’utente web abbia permessi di scrittura su `storage/` e `bootstrap/cache/`
+
+4. **Avvia l’installer**
+   - Apri `https://il-tuo-dominio/installer.php` (o semplicemente il dominio principale: il front controller rileva l’assenza di `vendor/` e mostra il wizard)
+
+5. **Segui i 4 step del wizard**
+   - Verifica requisiti (PHP, Composer, Node, npm, permessi cartelle)
+   - Compila le variabili `.env` (l’installer imposta sempre `APP_ENV=production` e `APP_DEBUG=false`)
+   - Avvia l’installazione automatica: esegue in sequenza `composer install`, `npm install`, `npm run build`, assegna i permessi, copia `.env`, genera la chiave e lancia tutte le migrazioni (landlord e tenant) con `tenants:setup-default` usando i dati inseriti
+   - Visualizza il riepilogo dei log e verifica il successo dei comandi
+
+6. **Pulisci dopo l’installazione**
+   - Rimuovi o proteggi `public/installer.php`
+   - Conserva `storage/installer.lock` per evitare esecuzioni accidentali; cancellalo solo se devi rifare il setup
+
+7. **Verifica configurazione finale**
+   - Mantieni il vhost su `public/`
+   - Controlla che PHP-FPM utilizzi lo stesso utente/gruppo usato durante l’installazione
+
+> ℹ️ Nota: `php artisan serve` non funziona prima che `vendor/` sia presente. Il wizard risolve questo pre-requisito automaticamente; su ambienti di produzione configura sempre un web server dedicato (Nginx/Apache).
 
 ## 🔒 Sicurezza
 

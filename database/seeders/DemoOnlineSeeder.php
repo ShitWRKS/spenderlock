@@ -90,11 +90,20 @@ class DemoOnlineSeeder extends Seeder
         });
 
         // Contacts (assign to an existing supplier to satisfy NOT NULL constraint)
+        // Make sure we have at least one supplier in the tenant DB. If not, create a default one.
+        $primarySupplier = $suppliers->first();
+        if (! $primarySupplier) {
+            $primarySupplier = Supplier::create([
+                'name' => 'Demo Supplier',
+                'email' => 'demo@supplier.example',
+            ]);
+        }
+
         $contacts = collect([
             ['name' => 'Luca Rossi', 'email' => 'luca.rossi@example.com', 'phone' => '+39 012 3456'],
             ['name' => 'Maria Bianchi', 'email' => 'maria.bianchi@example.com', 'phone' => '+39 098 7654'],
-        ])->map(function ($data) use ($suppliers) {
-            $data['supplier_id'] = $suppliers->first()->id ?? null;
+        ])->map(function ($data) use ($primarySupplier) {
+            $data['supplier_id'] = $primarySupplier->id;
             return Contact::firstOrCreate(['email' => $data['email']], $data);
         });
 

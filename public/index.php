@@ -11,7 +11,20 @@ if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php'))
 }
 
 // Register the Composer autoloader...
-require __DIR__.'/../vendor/autoload.php';
+$autoloader = __DIR__.'/../vendor/autoload.php';
+if (!is_file($autoloader)) {
+    $installer = __DIR__.'/installer.php';
+    if (is_file($installer)) {
+        require $installer;
+        return;
+    }
+
+    http_response_code(503);
+    echo 'Dipendenze non installate e installer non disponibile. Esegui composer install.';
+    exit;
+}
+
+require $autoloader;
 
 // Bootstrap Laravel and handle the request...
 /** @var Application $app */
