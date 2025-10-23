@@ -317,7 +317,7 @@ Per un deploy leggero puoi utilizzare il wizard `public/installer.php`, pensato 
 5. **Segui i 4 step del wizard**
    - Verifica requisiti (PHP, Composer, Node, npm, permessi cartelle)
    - Compila le variabili `.env` (l’installer imposta sempre `APP_ENV=production` e `APP_DEBUG=false`)
-   - Avvia l’installazione automatica: esegue in sequenza `composer install`, `npm install`, `npm run build`, assegna i permessi, copia `.env`, genera la chiave e lancia tutte le migrazioni (landlord e tenant) con `tenants:setup-default` usando i dati inseriti
+   - Avvia l’installazione automatica: esegue in sequenza `composer install`, `php artisan filament:assets`, `npm install`, `npm run build`, assegna i permessi, copia `.env`, genera la chiave e lancia tutte le migrazioni (landlord e tenant) con `tenants:setup-default` usando i dati inseriti
    - Visualizza il riepilogo dei log e verifica il successo dei comandi
 
 6. **Pulisci dopo l’installazione**

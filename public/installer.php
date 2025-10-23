@@ -26,9 +26,12 @@ $state = &$_SESSION['installer_state'];
 $state['env_saved'] = $envFileExists;
 $state['env_values'] = array_merge($state['env_values'] ?? [], $currentEnvValues);
 
+$allowAfterLock = (bool) ($state['allow_after_lock'] ?? false);
+
 if (!$lockFileExists && ($state['install_done'] ?? false)) {
     $_SESSION['installer_state'] = $initialState;
     $state = &$_SESSION['installer_state'];
+    $allowAfterLock = (bool) ($state['allow_after_lock'] ?? false);
 }
 
 $flashMessages = $_SESSION['installer_flash'] ?? [];
@@ -42,8 +45,14 @@ $allRequirementsMet = array_reduce($requirements, static function (bool $carry, 
     return $carry && $item['passed'];
 }, true);
 
-if ($lockFileExists && !($state['install_done'] ?? false)) {
-    $step = 0;
+if ($lockFileExists) {
+    if ($allowAfterLock) {
+        if ($step !== 4) {
+            redirectToStep(4);
+        }
+    } else {
+        $step = 0;
+    }
 } elseif ($step > 1 && !$allRequirementsMet) {
     addFlash('error', 'Verifica prima i requisiti prima di procedere con l\'installazione.');
     redirectToStep(1);
@@ -62,7 +71,7 @@ $formValues = $state['env_values'];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
-    if ($lockFileExists && !($state['install_done'] ?? false)) {
+    if ($lockFileExists && !$allowAfterLock) {
         addFlash('error', 'Installazione gia\' completata. Rimuovi il file di lock per rieseguire l\'installer.');
         redirectToStep(0);
     }
@@ -129,6 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 addFlash('warning', 'Installazione riuscita, ma non e\' stato possibile creare il file di lock.');
             }
+            $state['allow_after_lock'] = true;
             redirectToStep(4);
         }
 
@@ -162,7 +172,7 @@ $lockoutLabel = 'Installazione bloccata';
     </div>
 </header>
 <main class="mx-auto max-w-5xl px-4 py-10 space-y-6">
-    <?php if (!$lockFileExists || ($state['install_done'] ?? false)): ?>
+    <?php if (!$lockFileExists || $allowAfterLock): ?>
         <section class="grid gap-3 sm:grid-cols-4">
             <?php foreach ($stepLabels as $index => $label): ?>
                 <?php
@@ -209,7 +219,7 @@ $lockoutLabel = 'Installazione bloccata';
         </div>
     <?php endforeach; ?>
 
-    <?php if ($lockFileExists && !($state['install_done'] ?? false)): ?>
+    <?php if ($lockFileExists && !$allowAfterLock): ?>
         <section class="rounded-2xl border border-rose-200 bg-rose-50 p-6 shadow-lg shadow-rose-200/40">
             <div class="flex items-start gap-4">
                 <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-rose-600 text-lg font-semibold text-white">
@@ -235,6 +245,11 @@ $lockoutLabel = 'Installazione bloccata';
 <?php
     exit;
 endif;
+
+if ($lockFileExists && $allowAfterLock && $step === 4) {
+    $_SESSION['installer_state']['allow_after_lock'] = false;
+    $_SESSION['installer_state']['install_done'] = false;
+}
 ?>
     <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/40">
         <?php if ($step === 1): ?>
@@ -444,6 +459,7 @@ function createInitialInstallerState(array $envValues, bool $envFileExists): arr
         'install_done' => false,
         'install_log' => [],
         'install_exit_code' => null,
+        'allow_after_lock' => false,
     ];
 }
 
@@ -803,17 +819,22 @@ function buildInstallationSequence(string $basePath, string $envPath, string $en
             'command' => 'composer install --no-interaction --prefer-dist',
         ],
         [
-            'label' => '2) npm install',
+            'label' => '2) php artisan filament:assets',
+            'type' => 'command',
+            'command' => 'php artisan filament:assets',
+        ],
+        [
+            'label' => '3) npm install',
             'type' => 'command',
             'command' => 'npm install',
         ],
         [
-            'label' => '3) npm run build',
+            'label' => '4) npm run build',
             'type' => 'command',
             'command' => 'npm run build',
         ],
         [
-            'label' => '4) Imposta permessi su storage e bootstrap/cache',
+            'label' => '5) Imposta permessi su storage e bootstrap/cache',
             'type' => 'callable',
             'handler' => function () use ($basePath): array {
                 return applyDirectoryPermissions([
@@ -823,43 +844,43 @@ function buildInstallationSequence(string $basePath, string $envPath, string $en
             },
         ],
         [
-            'label' => '5) Copia .env.example in .env (se necessario)',
+            'label' => '6) Copia .env.example in .env (se necessario)',
             'type' => 'callable',
             'handler' => function () use ($envExamplePath, $envPath): array {
                 return ensureEnvFilePresence($envExamplePath, $envPath);
             },
         ],
         [
-            'label' => '6) php artisan key:generate',
+            'label' => '7) php artisan key:generate',
             'type' => 'command',
             'command' => 'php artisan key:generate --force',
         ],
         [
-            'label' => '7) touch database/landlord.sqlite',
+            'label' => '8) touch database/landlord.sqlite',
             'type' => 'callable',
             'handler' => function () use ($basePath): array {
                 return ensureSqliteDatabase($basePath . '/database/landlord.sqlite');
             },
         ],
         [
-            'label' => '8) touch database/database.sqlite',
+            'label' => '9) touch database/database.sqlite',
             'type' => 'callable',
             'handler' => function () use ($basePath): array {
                 return ensureSqliteDatabase($basePath . '/database/database.sqlite');
             },
         ],
         [
-            'label' => '9) php artisan migrate --force',
+            'label' => '10) php artisan migrate --force',
             'type' => 'command',
             'command' => 'php artisan migrate --force',
         ],
         [
-            'label' => '10) php artisan migrate --database=landlord --path=database/migrations/landlord',
+            'label' => '11) php artisan migrate --database=landlord --path=database/migrations/landlord',
             'type' => 'command',
             'command' => 'php artisan migrate --database=landlord --path=database/migrations/landlord --force',
         ],
         [
-            'label' => '11) php artisan tenants:setup-default',
+            'label' => '12) php artisan tenants:setup-default',
             'type' => 'command',
             'command' => $tenantCommand,
         ],

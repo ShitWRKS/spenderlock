@@ -62,6 +62,7 @@ Thumbs.db
 /public/js
 /public/css
 /public/mix-manifest.json
+storage/installer.lock
 
 # Coverage reports
 /coverage
