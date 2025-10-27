@@ -32,6 +32,8 @@ class Contract extends Model
     ];
 
     protected $casts = [
+        'start_date' => 'date',
+        'end_date' => 'date',
         'attachments_contract' => 'array',
         'attachments_orders' => 'array',
         'attachments_documents' => 'array',

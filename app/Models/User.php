@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Passport\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 use Filament\Models\Contracts\FilamentUser;
@@ -14,7 +15,7 @@ use Filament\Panel;
 
 /**
  * Modello User che utilizza il database tenant.
- * 
+ *
  * Il trait UsesTenantConnection fa sì che questo modello utilizzi
  * automaticamente la connessione del database tenant corrente.
  * Non è necessario aggiungere un campo tenant_id - l'isolamento
@@ -23,7 +24,7 @@ use Filament\Panel;
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasRoles, UsesTenantConnection;
+    use HasFactory, Notifiable, HasRoles, UsesTenantConnection, HasApiTokens;
 
     /**
      * The attributes that are mass assignable.

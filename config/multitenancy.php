@@ -21,7 +21,7 @@ return [
      * This class should extend `Spatie\Multitenancy\TenantFinder\TenantFinder`
      *
      */
-    'tenant_finder' => \Spatie\Multitenancy\TenantFinder\DomainTenantFinder::class,
+    'tenant_finder' => \App\TenantFinder\ApiTenantFinder::class,
 
     /*
      * These fields are used by tenant:artisan command to match one or more tenant.

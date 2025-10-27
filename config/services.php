@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'gmail_import' => [
+        'enabled' => env('GMAIL_API_ENABLED', false),
+        'max_attachment_size' => env('GMAIL_ATTACHMENT_MAX_SIZE', 26214400),
+    ],
+
 ];

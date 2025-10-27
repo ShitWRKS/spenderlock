@@ -3,6 +3,9 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Laravel\Passport\Passport;
+use Parallax\FilamentComments\Models\FilamentComment;
+use App\Listeners\PopulateCommentMetadataOnCreate;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +22,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Passport::enableImplicitGrant();
+
+        FilamentComment::created(function (FilamentComment $comment) {
+            (new PopulateCommentMetadataOnCreate())->handle($comment);
+        });
     }
 }

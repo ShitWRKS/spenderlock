@@ -1,0 +1,44 @@
+{
+    "timeZone": "Europe/Rome",
+    "exceptionLogging": "STACKDRIVER",
+    "runtimeVersion": "V8",
+    "oauthScopes": [
+        "https://www.googleapis.com/auth/gmail.addons.execute",
+        "https://www.googleapis.com/auth/gmail.addons.current.message.readonly",
+        "https://www.googleapis.com/auth/calendar.addons.execute",
+        "https://www.googleapis.com/auth/calendar.events",
+        "https://www.googleapis.com/auth/script.external_request",
+        "https://www.googleapis.com/auth/userinfo.email"
+    ],
+    "urlFetchWhitelist": [
+        "http://localhost:8000/",
+        "https://*.trycloudflare.com/"
+    ],
+    "addOns": {
+        "common": {
+            "name": "Spenderlock",
+            "logoUrl": "https://lh3.googleusercontent.com/webZJ1hRGrLxL-QBnWWeL8wlpREizMpDl1hrdfc8ncY3mMN3akd_LfAsrWZWqCMtMw",
+            "layoutProperties": {
+                "primaryColor": "#FFC107",
+                "secondaryColor": "#FFECB3"
+            }
+        },
+        "gmail": {
+            "contextualTriggers": [
+                {
+                    "unconditional": {},
+                    "onTriggerFunction": "buildAddOn"
+                }
+            ],
+            "homepageTrigger": {
+                "runFunction": "buildHomepage"
+            }
+        },
+        "calendar": {
+            "currentEventAccess": "READ",
+            "eventOpenTrigger": {
+                "runFunction": "buildCalendarAddOn"
+            }
+        }
+    }
+}

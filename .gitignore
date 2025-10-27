@@ -68,3 +68,7 @@ storage/installer.lock
 /coverage
 /.nyc_output
 /clover.xml
+
+# Gmail integration test files
+payload_test_import_email.json
+test-api.sh

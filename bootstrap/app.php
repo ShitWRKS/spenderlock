@@ -7,16 +7,26 @@ use Illuminate\Foundation\Configuration\Middleware;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->alias([
+            'passport' => \Laravel\Passport\Http\Middleware\CheckToken::class,
+        ]);
+
+        $middleware->api(append: [
+            \Illuminate\Http\Middleware\HandleCors::class,
+            \Spatie\Multitenancy\Http\Middleware\NeedsTenant::class,
+        ]);
+
         /**
          * Middleware per la gestione multi-tenant:
          * - EnsureTenantExists: Verifica che il tenant esista per il dominio corrente
          * - EnsureValidTenantSession: Verifica che il tenant nella sessione sia valido
          * - NeedsTenant: Assicura che un tenant sia identificato per la richiesta
-         * 
+         *
          * Questi middleware lavorano insieme al TenantFinder per identificare
          * il tenant corrente basato sul dominio della richiesta e switchare
          * automaticamente il database corrispondente.

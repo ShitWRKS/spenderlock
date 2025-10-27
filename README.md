@@ -1,396 +1,444 @@
-# SpenderLock
+# SpenderLock Production
 
-SpenderLock è un sistema di gestione contratti e budget multi-tenant sviluppato con Laravel e Filament Admin Panel. Il sistema permette di gestire fornitori, contratti, budget annuali e contatti con completo isolamento dei dati per ogni organizzazione.
+Sistema di gestione contratti e fornitori con integrazione Google Workspace.
 
-## 🏗️ Caratteristiche Principali
+## 📋 Indice
 
-- **Sistema Multi-Tenant**: Isolamento completo dei dati per ogni organizzazione
-- **Gestione Contratti**: Contratti con fornitori, categorie, date di scadenza, importi e allegati
-- **Gestione Budget**: Budget annuali suddivisi per categoria contratto
-- **Gestione Fornitori**: Anagrafica fornitori con contatti associati
-- **Dashboard Avanzata**: Widget per visualizzazione contratti in scadenza, calendario eventi, totali spesa
-- **Sistema di Autorizzazioni**: Gestione ruoli e permessi tramite Filament Shield
-- **Interfaccia Moderna**: Admin panel completo con Filament v3
-- **Deploy Docker**: Setup automatico con Docker Compose
+- [Descrizione](#descrizione)
+- [Architettura](#architettura)
+- [Requisiti](#requisiti)
+- [Installazione](#installazione)
+- [Configurazione](#configurazione)
+- [API Multi-tenant](#api-multi-tenant)
+- [Google Workspace Integration](#google-workspace-integration)
+- [Testing](#testing)
+- [Deployment](#deployment)
 
-## 🔧 Requisiti di Sistema
+## 🎯 Descrizione
 
-- PHP 8.4+
-- Composer
-- Node.js e npm
-- SQLite (per sviluppo) o PostgreSQL (per produzione)
-- Docker e Docker Compose (opzionale)
+SpenderLock è un sistema completo per la gestione di:
+- Contratti e scadenze
+- Fornitori e contatti
+- Timeline e comunicazioni
+- Documenti e allegati
+- Commenti e note
+- Integrazione email Gmail
+
+Il sistema è progettato per architettura **multi-tenant** con database SQLite separati per ogni tenant.
+
+## 🏗️ Architettura
+
+### Stack Tecnologico
+
+- **Backend**: Laravel 11
+- **Admin Panel**: Filament 3
+- **Database**: SQLite (multi-tenant)
+- **Authentication**: Laravel Passport (OAuth2)
+- **Multi-tenancy**: Spatie Laravel Multitenancy
+- **Frontend**: Livewire + Alpine.js
+- **API**: RESTful con OAuth2 client_credentials
+
+### Struttura Multi-tenant
+
+```
+database/
+├── landlord.sqlite          # Database principale (tenants, oauth_clients)
+├── tenant_*.sqlite          # Database per ogni tenant (dati isolati)
+└── database.sqlite          # Database di default
+```
+
+Ogni tenant ha database isolato con tabelle:
+- contracts, suppliers, contacts
+- filament_comments, comment_metadata, comment_links
+- reminders, contract_categories
+- users (specifici del tenant)
+
+## 📦 Requisiti
+
+- PHP 8.2+
+- Composer 2.x
+- SQLite 3
+- Node.js 18+ (per asset build)
+- Git
 
 ## 🚀 Installazione
 
-### Opzione 1: Setup con Docker (Raccomandato)
-
-**🚀 Quick Start (5 minuti):**
-```bash
-git clone https://github.com/ShitWRKS/spenderlock
-cd spenderlock
-docker-compose up -d --build
-```
-Poi vai su http://localhost/admin e usa:
-- **Email**: admin@spenderlock.com
-- **Password**: spenderlock123
-
-**🔧 Setup Personalizzato:**
-
-1. **Clona il repository**
-   ```bash
-   git clone https://github.com/ShitWRKS/spenderlock
-   cd spenderlock
-   ```
-
-2. **Configura le credenziali admin (opzionale)**
-   
-   Modifica le variabili di ambiente nel `docker-compose.yml`:
-   ```yaml
-   environment:
-     - DEFAULT_TENANT_NAME=La Tua Azienda
-     - DEFAULT_TENANT_DOMAIN=localhost
-     - DEFAULT_ADMIN_NAME=Administrator
-     - DEFAULT_ADMIN_EMAIL=admin@tuaazienda.com
-     - DEFAULT_ADMIN_PASSWORD=password-sicura
-   ```
-
-3. **Avvia il sistema**
-   ```bash
-   docker-compose up -d --build
-   ```
-
-4. **Accedi al pannello admin**
-   - URL: http://localhost/admin
-   - Email: admin@spenderlock.com (o quello configurato)
-   - Password: spenderlock123 (o quella configurata)
-
-### Opzione 2: Setup Locale
-
-1. **Clona il repository**
-   ```bash
-   git clone https://github.com/ShitWRKS/spenderlock
-   cd spenderlock
-   ```
-
-2. **Installa le dipendenze**
-   ```bash
-   composer install
-   npm install
-   ```
-
-3. **Configura l'ambiente**
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   ```
-
-4. **Crea il database landlord**
-   ```bash
-   touch database/landlord.sqlite
-   php artisan migrate --database=landlord --path=database/migrations/landlord
-   ```
-
-5. **Crea tenant e utente admin**
-   
-   **Metodo rapido (raccomandato):**
-   ```bash
-   php artisan tenants:setup-default \
-     --tenant-name="La Tua Azienda" \
-     --tenant-domain="localhost" \
-     --admin-name="Administrator" \
-     --admin-email="admin@localhost" \
-     --admin-password="password123"
-   ```
-   
-   **Metodo manuale (step by step):**
-   ```bash
-   php artisan tenants:create "La Tua Azienda" "localhost"
-   php artisan tenants:create-user 1 "Administrator" "admin@localhost" "password123" --admin
-   ```
-
-6. **Compila gli asset e avvia il server**
-   ```bash
-   npm run dev
-   php artisan serve --port=8000
-   ```
-
-7. **Accedi al pannello admin**
-   - URL: http://localhost:8000/admin
-   - Email: admin@localhost
-   - Password: password123
-
-## 🏢 Gestione Multi-Tenant
-
-### Comandi Principali
+### 1. Clone e dipendenze
 
 ```bash
-# Setup tenant di default con admin (raccomandato per primo setup)
-php artisan tenants:setup-default \
-  --tenant-name="La Tua Azienda" \
-  --tenant-domain="localhost" \
-  --admin-name="Administrator" \
-  --admin-email="admin@localhost" \
-  --admin-password="password"
-
-# Crea un nuovo tenant
-php artisan tenants:create "Nome Azienda" "dominio.local"
-
-# Crea utente admin per un tenant
-php artisan tenants:create-user 1 "Admin" "admin@domain.com" "password" --admin
-
-# Crea utente normale per un tenant
-php artisan tenants:create-user 1 "User" "user@domain.com" "password"
-
-# Esegui comandi per tutti i tenant
-php artisan tenants:artisan "migrate"
-
-# Esegui comando per tenant specifico
-php artisan tenants:artisan "db:seed" --tenant=1
+cd spenderlock-prod
+composer install
+npm install && npm run build
 ```
 
-### Setup Tenant di Default
+### 2. Configurazione ambiente
 
-Il comando `tenants:setup-default` è ideale per il primo setup o per deploy automatizzati (Docker):
-
-**Con parametri espliciti:**
 ```bash
-php artisan tenants:setup-default \
-  --tenant-name="SpenderLock Demo" \
-  --tenant-domain="localhost" \
-  --admin-name="Administrator" \
-  --admin-email="admin@localhost" \
-  --admin-password="password123"
+cp .env.example .env
+php artisan key:generate
 ```
 
-**Con variabili d'ambiente (.env):**
+Configura `.env`:
+
+```env
+APP_NAME="SpenderLock"
+APP_ENV=production
+APP_DEBUG=false
+APP_TIMEZONE=Europe/Rome
+APP_URL=http://localhost:8000
+
+DB_CONNECTION=sqlite
+DB_DATABASE=/path/to/spenderlock-prod/database/database.sqlite
+```
+
+### 3. Database setup
+
 ```bash
-# Nel file .env
-DEFAULT_TENANT_NAME="La Tua Azienda"
-DEFAULT_TENANT_DOMAIN="localhost"
-DEFAULT_ADMIN_NAME="Administrator"
-DEFAULT_ADMIN_EMAIL="admin@tuaazienda.com"
-DEFAULT_ADMIN_PASSWORD="password-sicura"
+# Crea file database
+touch database/database.sqlite
+touch database/landlord.sqlite
 
-# Poi esegui
-php artisan tenants:setup-default
+# Esegui migrations
+php artisan migrate
+
+# Seed (opzionale)
+php artisan db:seed
 ```
 
-**Caratteristiche:**
-- ✅ Crea automaticamente il tenant se non esiste
-- ✅ Crea il database SQLite del tenant
-- ✅ Esegue le migrazioni del tenant
-- ✅ Crea l'utente admin con ruolo super_admin
-- ✅ Genera automaticamente permessi e ruoli
-- ✅ Idempotente: può essere eseguito più volte senza errori
-- ✅ Non richiede interazione utente (perfetto per Docker/CI)
+### 4. Laravel Passport setup
 
-### Configurazione Domini Locali
-
-Per testare più tenant in locale, aggiungi al tuo `/etc/hosts`:
-```
-127.0.0.1 azienda1.local
-127.0.0.1 azienda2.local
-127.0.0.1 test.local
-```
-
-## 🔧 Sviluppo
-
-### Avvio Rapido
 ```bash
-# Avvia tutti i servizi necessari
-composer run dev
-```
-Questo comando avvia simultaneamente:
-- Server Laravel (porta 8000)
-- Queue worker per job in background
-- Log monitoring con Pail
-- Vite dev server per asset
+# Installa Passport
+php artisan passport:install
 
-### Comandi Individuali
+# Output conterrà:
+# Client ID: 019a252b-844c-7192-a76b-94858e700651
+# Client Secret: rtKLxJhQd6rppdlwqIjC3WKewQgtsVPY6QQ9bpdZ
+```
+
+Salva `Client ID` e `Client Secret` per configurare Apps Script.
+
+### 5. Crea tenant
+
 ```bash
-# Server Laravel
+php artisan tinker
+```
+
+```php
+use App\Models\Tenant;
+
+$tenant = Tenant::create([
+    'name' => 'SpenderLock Company',
+    'domain' => 'localhost',
+    'database' => database_path('tenant_spenderlock_company.sqlite')
+]);
+
+// Crea database tenant
+touch database/tenant_spenderlock_company.sqlite
+```
+
+### 6. Avvia server
+
+```bash
 php artisan serve
-
-# Compilazione asset
-npm run dev          # Sviluppo con hot reload
-npm run build        # Build produzione
-
-# Database
-php artisan migrate --database=landlord --path=database/migrations/landlord
-php artisan tenants:artisan "migrate"
-
-# Test
-composer run test
-php artisan test
-
-# Code formatting
-php artisan pint
-
-# Filament
-php artisan filament:upgrade
-php artisan tenants:artisan "shield:generate --all --panel=admin"
 ```
 
-## 📊 Struttura del Progetto
+Accedi a: http://localhost:8000
 
-### Architettura Multi-Tenant
-- **Database Landlord**: Contiene la tabella `tenants` e configurazioni globali
-- **Database Tenant**: Ogni tenant ha il proprio database SQLite isolato
-- **Switching Automatico**: Il sistema cambia automaticamente database in base al dominio
+## ⚙️ Configurazione
 
-### Modelli Principali
-- **Tenant**: Modello principale per la gestione multi-tenant (usa Landlord DB)
-- **Contract**: Contratto con fornitore, categoria, date e importi (usa Tenant DB)
-- **Budget**: Budget annuale per categoria contratto (usa Tenant DB)
-- **Supplier**: Anagrafica fornitore (usa Tenant DB)
-- **Contact**: Contatto associato a fornitore (usa Tenant DB)
-- **ContractCategory**: Categoria per classificazione contratti (usa Tenant DB)
+### Multi-tenancy
 
-### Filament Resources
-- Admin panel completo per tutti i modelli
-- Dashboard con widget personalizzati
-- Gestione ruoli e permessi integrata
-- Export/Import dati
-- Calendario contratti interattivo
+Il sistema identifica il tenant da:
+1. **Richieste Web**: Dominio (es. `localhost`, `app.example.com`)
+2. **Richieste API**: Header `X-Tenant-Domain` o `X-Tenant-ID`
 
-## 🚀 Deploy in Produzione
+Configurazione in `config/multitenancy.php`:
 
-### Docker (Raccomandato)
+```php
+'tenant_finder' => \App\TenantFinder\ApiTenantFinder::class,
+'tenant_database_connection_name' => 'tenant',
+'landlord_database_connection_name' => 'landlord',
+```
 
-1. **Modifica docker-compose.yml** con le tue configurazioni
-2. **Configura le variabili di ambiente** per il tenant di default
-3. **Deploy:**
-   ```bash
-   docker-compose up -d --build
-   ```
+### OAuth2 API
 
-### Server Tradizionale
+Le API usano **client_credentials grant** (machine-to-machine):
 
-1. **Setup server** con PHP 8.4+, PostgreSQL, Redis
-2. **Deploy codice** e installa dipendenze:
-   ```bash
-   composer install --optimize-autoloader --no-dev
-   npm install && npm run build
-   ```
-3. **Configura database** e esegui migrazioni:
-   ```bash
-   php artisan migrate --database=landlord --path=database/migrations/landlord
-   ```
-4. **Setup tenant di default**:
-   ```bash
-   php artisan tenants:setup-default \
-     --tenant-name="Tua Azienda" \
-     --tenant-domain="tuodominio.com" \
-     --admin-name="Admin" \
-     --admin-email="admin@tuodominio.com" \
-     --admin-password="password-sicura"
-   ```
-5. **Ottimizza per produzione**:
-   ```bash
-   php artisan config:cache
-   php artisan route:cache
-   php artisan view:cache
-   ```
+```bash
+# Get access token
+curl -X POST http://localhost:8000/oauth/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "grant_type": "client_credentials",
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET"
+  }'
+```
 
-### Installer PHP (senza Docker)
+Response:
+```json
+{
+  "token_type": "Bearer",
+  "expires_in": 31536000,
+  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+}
+```
 
-Per un deploy leggero puoi utilizzare il wizard `public/installer.php`, pensato per ambienti condivisi dove non hai Docker a disposizione.
+### Timezone
 
-1. **Prepara il server**
-   - PHP 8.2+ con estensioni: `bcmath`, `ctype`, `fileinfo`, `json`, `mbstring`, `openssl`, `pdo`, `pdo_sqlite`, `sqlite3`, `tokenizer`, `xml`
-   - Composer, Node.js (>= 18) e npm (>= 9) disponibili nel `PATH`
-   - Directory `storage/` e `bootstrap/cache/` scrivibili
+Configurato in `.env`:
 
-2. **Carica il codice sorgente**
-   - Sincronizza il repository sul server (via Git o deploy tool)
-   - Assicurati che `public/installer.php` sia presente (non cancellarlo prima del primo avvio)
+```env
+APP_TIMEZONE=Europe/Rome
+```
 
-3. **Configura CloudPanel / PHP-FPM**
-   - Crea un nuovo vhost puntando la document root a `public/`
-   - Seleziona PHP 8.2+ con le estensioni richieste
-   - Assicurati che l’utente web abbia permessi di scrittura su `storage/` e `bootstrap/cache/`
+Orari salvati in UTC, mostrati in timezone configurato.
 
-4. **Avvia l’installer**
-   - Apri `https://il-tuo-dominio/installer.php` (o semplicemente il dominio principale: il front controller rileva l’assenza di `vendor/` e mostra il wizard)
+## 🔌 API Multi-tenant
 
-5. **Segui i 4 step del wizard**
-   - Verifica requisiti (PHP, Composer, Node, npm, permessi cartelle)
-   - Compila le variabili `.env` (l’installer imposta sempre `APP_ENV=production` e `APP_DEBUG=false`)
-   - Avvia l’installazione automatica: esegue in sequenza `composer install`, `php artisan filament:assets`, `npm install`, `npm run build`, assegna i permessi, copia `.env`, genera la chiave e lancia tutte le migrazioni (landlord e tenant) con `tenants:setup-default` usando i dati inseriti
-   - Visualizza il riepilogo dei log e verifica il successo dei comandi
+### Autenticazione
 
-6. **Pulisci dopo l’installazione**
-   - Rimuovi o proteggi `public/installer.php`
-   - Conserva `storage/installer.lock` per evitare esecuzioni accidentali; cancellalo solo se devi rifare il setup
+Tutte le API richiedono:
+1. **Bearer Token** (OAuth2)
+2. **Header X-Tenant-Domain** (per identificare tenant)
 
-7. **Verifica configurazione finale**
-   - Mantieni il vhost su `public/`
-   - Controlla che PHP-FPM utilizzi lo stesso utente/gruppo usato durante l’installazione
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     -H "X-Tenant-Domain: localhost" \
+     http://localhost:8000/api/contracts/upcoming
+```
 
-> ℹ️ Nota: `php artisan serve` non funziona prima che `vendor/` sia presente. Il wizard risolve questo pre-requisito automaticamente; su ambienti di produzione configura sempre un web server dedicato (Nginx/Apache).
+### Endpoint Disponibili
+
+#### Contratti
+- `GET /api/contracts/upcoming?days=30` - Contratti in scadenza
+- `GET /api/contracts/search?q=term` - Cerca contratti
+- `GET /api/contracts/{id}` - Dettaglio contratto
+- `POST /api/contracts/{id}/reminders` - Crea reminder
+
+#### Fornitori
+- `GET /api/suppliers` - Lista fornitori
+- `GET /api/suppliers?q=term` - Cerca fornitori
+- `GET /api/suppliers/{id}` - Dettaglio fornitore
+- `POST /api/suppliers` - Crea fornitore
+- `GET /api/suppliers/{id}/contacts` - Contatti fornitore
+
+#### Contatti
+- `GET /api/contacts/{id}` - Dettaglio contatto
+- `POST /api/contacts` - Crea contatto
+- `PUT /api/contacts/{id}` - Aggiorna contatto
+- `GET /api/contacts/search/email?email=` - Cerca per email
+
+#### Commenti
+- `GET /api/comments/{type}/{id}` - Lista commenti (type: contract|supplier|contact)
+- `POST /api/comments/{type}/{id}` - Crea commento
+
+#### Thread Comunicazioni
+- `GET /api/communication-threads/{id}` - Dettaglio thread
+
+#### Import Email
+- `POST /api/comments/import-email` - Importa email da Gmail
+
+### Script di Test
+
+Usa `test-api.sh` per testare tutti gli endpoint:
+
+```bash
+chmod +x test-api.sh
+./test-api.sh
+```
+
+Configura prima:
+```bash
+CLIENT_ID="your-client-id"
+CLIENT_SECRET="your-client-secret"
+TENANT_DOMAIN="localhost"
+```
+
+## 📧 Google Workspace Integration
+
+### Apps Script Addon
+
+File in `appscript/`:
+- `appsscript.json` - Manifest addon
+- `Code.gs` - Entry points
+- `Config.gs` - Configurazione OAuth2 e API
+- `Auth.gs` - Gestione token
+- `API.gs` - Chiamate API
+- `UI-v1.3.gs` - Interfaccia CardService
+
+### Configurazione Apps Script
+
+1. **Crea progetto**: https://script.google.com
+2. **Copia file** da `appscript/` al progetto
+3. **Configura `Config.gs`**:
+
+```javascript
+const CONFIG = {
+  API_BASE_URL: 'https://your-domain.com/api',
+  OAUTH_TOKEN_URL: 'https://your-domain.com/oauth/token',
+  OAUTH_CLIENT_ID: 'YOUR_CLIENT_ID',
+  OAUTH_CLIENT_SECRET: 'YOUR_CLIENT_SECRET',
+  TENANT_DOMAIN: 'localhost',  // Match con tenant Laravel
+  // ...
+};
+```
+
+4. **Deploy addon**:
+   - Deploy → Test deployments → Install
+   - Testa in Gmail
+
+### Funzionalità Gmail Addon
+
+- 📋 Visualizza contratti in scadenza
+- 🔍 Cerca contratti e fornitori
+- 📨 Importa email come commenti
+- 📆 Collega email a contratti/fornitori
+- 📝 Aggiungi note rapide
+
+## 🧪 Testing
+
+### Test API
+
+```bash
+# Test singolo endpoint
+curl -X GET http://localhost:8000/api/contracts/upcoming \
+  -H "Authorization: Bearer TOKEN" \
+  -H "X-Tenant-Domain: localhost"
+
+# Test completo
+./test-api.sh
+```
+
+### Test Database
+
+```bash
+php artisan tinker
+```
+
+```php
+// Verifica tenant
+use App\Models\Tenant;
+Tenant::all();
+
+// Verifica connessione tenant
+use App\Models\Contract;
+Contract::count();
+```
+
+## 🚀 Deployment
+
+### Opzione 1: Server Locale con Cloudflare Tunnel
+
+```bash
+# Installa cloudflared
+brew install cloudflare/cloudflare/cloudflared
+
+# Crea tunnel
+cloudflared tunnel --url http://localhost:8000
+```
+
+Output: `https://random-name.trycloudflare.com`
+
+Aggiorna Apps Script `Config.gs` con l'URL.
+
+### Opzione 2: Hosting Condiviso
+
+1. Upload files via FTP/SFTP
+2. Configura `.env` per produzione
+3. `composer install --no-dev --optimize-autoloader`
+4. `php artisan config:cache`
+5. `php artisan route:cache`
+6. `php artisan view:cache`
+
+### Opzione 3: VPS/Cloud
+
+Vedi `docs/DEPLOY-OPTIONS.md` per guide dettagliate.
+
+## 📁 Struttura Progetto
+
+```
+spenderlock-prod/
+├── app/
+│   ├── Filament/           # Filament resources
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   └── Api/        # API Controllers
+│   │   └── Middleware/
+│   ├── Models/             # Eloquent models
+│   │   ├── Tenant.php
+│   │   ├── Contract.php
+│   │   ├── Supplier.php
+│   │   └── Contact.php
+│   └── TenantFinder/       # Custom tenant finder
+├── appscript/              # Google Apps Script files
+│   ├── appsscript.json
+│   ├── Code.gs
+│   ├── Config.gs
+│   ├── Auth.gs
+│   ├── API.gs
+│   └── UI-v1.3.gs
+├── config/
+│   ├── multitenancy.php    # Multi-tenancy config
+│   └── database.php        # Database connections
+├── database/
+│   ├── migrations/
+│   ├── landlord.sqlite     # Main database
+│   └── tenant_*.sqlite     # Tenant databases
+├── routes/
+│   ├── web.php
+│   └── api.php             # API routes
+├── test-api.sh             # API test script
+└── README.md
+```
 
 ## 🔒 Sicurezza
 
-- **Isolamento Database**: Ogni tenant ha database completamente separato
-- **Domain-based Access**: Accesso basato su dominio verificato
-- **Role-based Permissions**: Sistema di ruoli e permessi granulare
-- **Session Validation**: Validazione sessioni per prevenire cross-tenant access
+### Credenziali da NON committare
 
-## 📝 Documentazione
+- ❌ `.env` file
+- ❌ `database/*.sqlite`
+- ❌ `storage/oauth-*.key`
+- ❌ OAuth client secrets
 
-- [Guida Multi-Tenancy](MULTITENANCY.md) - Documentazione completa del sistema multi-tenant
-- [Testing Guide](TESTING_GUIDE.md) - Guida per testing e sviluppo
+### Best Practices
+
+- ✅ Usa `.gitignore` per files sensibili
+- ✅ Ruota secrets regolarmente
+- ✅ Usa HTTPS in produzione
+- ✅ Abilita rate limiting API
+- ✅ Monitora accessi OAuth
+
+## 📝 Changelog
+
+### v1.0.0 (27 Ottobre 2024)
+
+**Features**:
+- ✅ Multi-tenancy con Spatie Laravel Multitenancy
+- ✅ OAuth2 API con Laravel Passport
+- ✅ Custom TenantFinder per API (header-based)
+- ✅ 14+ endpoint API REST
+- ✅ Google Apps Script addon per Gmail
+- ✅ Sistema commenti con metadata
+- ✅ Import email da Gmail
+- ✅ Timeline attività
+- ✅ Gestione allegati
+
+**Fixes**:
+- ✅ Timezone corretto (Europe/Rome)
+- ✅ Date cast in Contract model
+- ✅ Validazione supplier_id con multitenancy
+- ✅ User lookup per commenti da API
 
 ## 🤝 Contributi
 
-1. Fork del repository
-2. Crea feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit delle modifiche (`git commit -m 'Add some AmazingFeature'`)
-4. Push al branch (`git push origin feature/AmazingFeature`)
-5. Apri una Pull Request
+Progetto interno per gestione contratti e fornitori.
 
 ## 📄 Licenza
 
-Questo progetto è distribuito sotto licenza MIT. Vedi il file `LICENSE` per dettagli.
+Internal Use Only © 2024
 
-## 🆘 Supporto
+---
 
-Per supporto e bug report:
-- Apri una [issue su GitHub](../../issues)
-- Consulta la [documentazione](MULTITENANCY.md)
-- Verifica la [guida di testing](TESTING_GUIDE.md)
-
-## Tecnologie Utilizzate
-
-- **Backend**: Laravel 12.x, Filament 3.x
-- **Frontend**: Tailwind CSS 4.x, Vite 6.x
-- **Database**: SQLite (dev), MySQL/PostgreSQL (prod)
-- **Autorizzazioni**: Spatie Laravel Permission + Filament Shield
-- **File Upload**: Gestito tramite Filament con storage locale
-
-## Configurazione Produzione
-
-1. **Variabili ambiente produzione**
-   ```bash
-   APP_ENV=production
-   APP_DEBUG=false
-   APP_URL=https://your-domain.com
-   ```
-
-2. **Database produzione**
-   - Configura MySQL/PostgreSQL nel file `.env`
-   - Esegui migration: `php artisan migrate --force`
-
-3. **Ottimizzazione**
-   ```bash
-   composer install --optimize-autoloader --no-dev
-   php artisan config:cache
-   php artisan route:cache
-   php artisan view:cache
-   npm run build
-   ```
-
-## Licenza
-
-Questo progetto è distribuito sotto licenza MIT. Vedi il file `LICENSE` per maggiori dettagli.
+**Ultima modifica**: 27 Ottobre 2024
